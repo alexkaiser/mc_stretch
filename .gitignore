@@ -1,0 +1,13 @@
+load_parameters.m
+histogram_*
+*~
+*.o
+.*
+samples.dat
+stretch_move_main
+full_data.txt
+*.fig
+Debug
+stats.txt
+stats_acor.txt
+stats_acor_ensemble.txt

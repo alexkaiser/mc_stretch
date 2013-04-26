@@ -1,0 +1,23 @@
+
+Stretch-Move Markov chain Monte Carlo in C and OpenCL. 
+
+Much more detail in readme_stretch_move_ocl.pdf. 
+
+Please email adkaiser at the domain gmail.com for help. 
+
+__________________________________________________
+
+
+Follow these steps to get started quickly with the included examples. 
+
+
+
+ - Place generic C code to evaluate the log of the probability density function (pdf) you would like to sample in "pdf.h."
+
+ - Put needed definition statements in "constants.h." This is usually for the dimension of the problem, other loop bounds, boundaries for a prior or whatever other constants you might want. 
+
+ - Build the code with the included makefile. 
+
+ - Pick one of the included examples in "stretch_move_main.c" to run. Check that parameters in the example match your problem, which usually means setting the correct dimension.
+
+ - Run the executable. The code will prompt to select an OpenCL implementation and hardware, then run the sampler. 
