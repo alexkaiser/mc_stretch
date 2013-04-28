@@ -70,8 +70,8 @@ void example_simple(){
     cl_int data_length = 0;                           // No data for this example
     cl_float *data_temp = NULL;                       // Need to pass a NULL pointer for the data
     data_struct data_st;                              // Don't use this either, leave it uninitialized
-    const char *plat_name = CHOOSE_INTERACTIVELY;     // Choose the device interactively at runtime
-    const char *dev_name  = CHOOSE_INTERACTIVELY;     // Choose the platform interactively at runtime
+    const char *plat_name = CHOOSE_INTERACTIVELY;     // Choose the platform interactively at runtime
+    const char *dev_name  = CHOOSE_INTERACTIVELY;     // Choose the device interactively at runtime
 
 
     // initialize the sampler
@@ -113,8 +113,8 @@ void example_with_data(){
     cl_int walkers_per_group = 4096;                  // Total number of walkers is twice this
     size_t work_group_size = 128;                     // Work group size. Use 1 for CPU, larger number for GPU
     cl_int pdf_number = 1;                            // Use pdf 1 for this problem
-    const char *plat_name = CHOOSE_INTERACTIVELY;     // Choose the device interactively at runtime
-    const char *dev_name  = CHOOSE_INTERACTIVELY;     // Choose the platform interactively at runtime
+    const char *plat_name = CHOOSE_INTERACTIVELY;     // Choose the platform interactively at runtime
+    const char *dev_name  = CHOOSE_INTERACTIVELY;     // Choose the device interactively at runtime
     data_struct data_st;                              // Don't use this, leave it uninitialized
 
 
