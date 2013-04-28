@@ -129,7 +129,7 @@ void example_with_data(){
         data[i] = 0.0f;
     }
 
-    for(int i=0; i < dimension; i++){
+    for(int i=0; i < (dimension-1); i++){
         data[ i   +     i*dimension + dimension ] =  2.0f;
         data[ i+1 +     i*dimension + dimension ] = -1.0f;
         data[ i   + (i+1)*dimension + dimension ] = -1.0f;

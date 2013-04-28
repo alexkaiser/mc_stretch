@@ -742,6 +742,7 @@ void output_histograms(sampler *samp, char matlab_hist, char gnuplot_hist){
 
     free(centers);
     free(f_hat);
+    free(sigma_f_hat);
     free(X);
 
 
