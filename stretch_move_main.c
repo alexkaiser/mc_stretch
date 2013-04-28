@@ -102,14 +102,15 @@ void example_simple(){
 
 
 void example_with_data(){
-    // Example of running the sampler.
+
+	// Example of running the sampler.
     // Similar to above, but uses data
-    // Also runs simulated annealing to accelerate convergence
+
 
     // User set parameters
-    cl_int chain_length = 100000;                     // allocate to store this much chain, sampler runs this many steps at once
+    cl_int chain_length = 10000;                      // allocate to store this much chain, sampler runs this many steps at once
     cl_int dimension = 10 ;                           // dimension of the state vector
-    cl_int walkers_per_group = 1024;                  // total number of walkers is twice this
+    cl_int walkers_per_group = 4096;                  // total number of walkers is twice this
     size_t work_group_size = 128;                     // Work group size. Use 1 for CPU, larger number for GPU
     cl_int pdf_number = 1;                            // Use pdf 1 for this problem
     const char *plat_name = CHOOSE_INTERACTIVELY;     // Choose the device interactively at runtime
