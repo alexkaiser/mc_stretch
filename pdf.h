@@ -28,6 +28,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "constants.h"
 
+// define this flag to put data array into local memory
+#define USE_LOCAL_DATA
+
+// if this is not defined
+#ifdef USE_LOCAL_DATA
+	#define DATA_ARRAY_TYPE  __local const float
+#else
+    #define DATA_ARRAY_TYPE __global const float
+#endif
+
+
 
 typedef struct{
 
@@ -44,17 +55,17 @@ typedef struct{
 
 
 
-float log_pdf(float *x, data_struct data_st, const __local float *data){
+float log_pdf(float *x, data_struct data_st, DATA_ARRAY_TYPE *data){
     /*
     Evaluate denormalized log of the PDF.
 
     Input:
-        __local float *x              Location at which to evaluate PDF
-        data_struct data_st           Structure containing any additional scalars or statically defined arrays.
-        const __local float *data     Any observations or data.
+        __local float *x                      Location at which to evaluate PDF
+        data_struct data_st                   Structure containing any additional scalars or statically defined arrays.
+        const DATA_ARRAY_TYPE float *data     Any observations or data.
 
     Output:
-        returned:                     Log of the denormalized pdf that we are going to sample.
+        returned:                             Log of the denormalized pdf that we are going to sample.
     */
 
     if(PDF_NUMBER==0){
@@ -80,10 +91,10 @@ float log_pdf(float *x, data_struct data_st, const __local float *data){
         //
 
         // The first elements of the data array are the means
-        const __local float *mu = data;   // mean
+        DATA_ARRAY_TYPE *mu = data;   // mean
 
         // NN elements later is the inverse covariance matrix
-        const __local float *inv_cov  = data + NN;
+        DATA_ARRAY_TYPE *inv_cov  = data + NN;
 
             // temp array for inner products
         float temp[NN];
