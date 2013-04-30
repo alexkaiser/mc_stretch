@@ -80,15 +80,15 @@ __kernel void stretch_move(
     // random numbers go here 
     float4 xi; 
         
-	#ifdef USE_LOCAL_DATA 
-    	// allocate more local for the observation arrays 
-    	__local float data_local[DATA_LEN]; 
-    	for(int i=lid; i<DATA_LEN; i += work_group_size)
-    		data_local[i] = data[i];  
+    #ifdef USE_LOCAL_DATA 
+        // allocate more local for the observation arrays 
+        __local float data_local[DATA_LEN]; 
+        for(int i=lid; i<DATA_LEN; i += work_group_size)
+            data_local[i] = data[i];  
     
-    	// make sure all the copies have gone through 
-    	barrier(CLK_LOCAL_MEM_FENCE);    
-	#endif
+        // make sure all the copies have gone through 
+        barrier(CLK_LOCAL_MEM_FENCE);    
+    #endif
     
     // if we somehow start more work items than there are walkers in each group, move on 
     if(k < K_OVER_TWO){
@@ -107,11 +107,11 @@ __kernel void stretch_move(
             Y[i] = X_fixed[i + j*NN] + z * (X_moving[i + k*NN] - X_fixed[i + j*NN]); 
 
         // evaluate the likelihood function 
-		#ifdef USE_LOCAL_DATA
-        	log_py  = log_pdf(Y, data_st, data_local);
-		#else
-        	log_py  = log_pdf(Y, data_st, data);
-		#endif 
+        #ifdef USE_LOCAL_DATA
+            log_py  = log_pdf(Y, data_st, data_local);
+        #else
+            log_py  = log_pdf(Y, data_st, data);
+        #endif 
         
         // always reject an inf sample 
         if(isinf(log_py)){ 

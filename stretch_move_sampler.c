@@ -33,7 +33,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                             cl_int walkers_per_group, size_t work_group_size,
                             cl_int pdf_number,
-                            cl_int data_length, cl_float *data, data_struct *data_st,
+                            cl_int data_length, cl_float *data,
                             const char *plat_name, const char *dev_name){
 
     /*
@@ -57,6 +57,8 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                                                  This number must divide walkers_per_group.
           cl_int data_length                 Length of observation data. If no data set this to zero.
           cl_float *data                     Observation data.
+          const char *plat_name              String for platform name. Set to CHOOSE_INTERACTIVELY (no quotes) to do so.
+          const char *dev_name               String for device name. Set to CHOOSE_INTERACTIVELY (no quotes) to do so.
 
      Output:
           returned: sampler *samp            Pointer to sampler struct with parameters, arrays, context, queue, kernel initialized.
@@ -87,8 +89,10 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     samp->K = 2 * samp->K_over_two;                   // Total walkers
     samp->total_samples = samp->M * samp->K;          // Total samples produced
 
-    // user set data struct
-    samp->data_st = data_st;
+    // Allocate the structure
+    samp->data_st = (data_struct *) malloc(sizeof(data_struct));
+    if(!(samp->data_st)) { perror("Allocation failure data_struct"); abort(); }
+
 
     // default value one, unless performing simulated annealing
     (samp->data_st)->beta = 1.0f;
@@ -117,7 +121,7 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     // --------------------------------------------------------------------------
     if(OUTPUT_LEVEL > 0) printf("Begin opencl contexts.\n");
 
-    create_context_on(plat_name, dev_name, 0, &(samp->ctx), &(samp->queue), 0);
+    create_context_and_two_queues_on(plat_name, dev_name, 0, &(samp->ctx), &(samp->queue), &(samp->queue_mem) , 0);
 
     // print information on selected device
     if(OUTPUT_LEVEL > 1)  print_device_info_from_queue(samp->queue);
@@ -506,6 +510,18 @@ void run_burn_in(sampler *samp, int burn_length){
 void run_sampler(sampler *samp){
     /*
      Run the sampler and save output.
+     Overlap sampling and communication with the device using two queues.
+     While red walkers are being sampled, black walkers are being sent.
+     This means that the first sampling iteration reads black walkers from the burn in,
+     and the final iteration is thrown out.
+
+     Runs in the following order.
+         - Sample X_red non-blocking
+         - Copy X_black to host non-blocking
+         - Check both are finished
+         - Sample X_black non-blocking
+         - Copy X_red to host non-blocking
+         - Check both are finished
 
      Input:
           sampler *samp        Pointer to sampler structure which has been initialized.
@@ -534,7 +550,7 @@ void run_sampler(sampler *samp){
 
     for(int it=0; it<samp->M; it++){
 
-        // update the red sample
+        // update X_red
         SET_7_KERNEL_ARGS(samp->stretch_knl,
               samp->X_red_device,
               samp->log_pdf_red_device,
@@ -549,16 +565,20 @@ void run_sampler(sampler *samp){
                /*dimensions*/ 1, NULL, samp->gdim, samp->ldim,
                0, NULL, NULL));
 
-        // pull the red walkers back to use the samples
+        // read the constant samples while others are updating
         CALL_CL_GUARDED(clEnqueueReadBuffer, (
-            samp->queue, samp->X_red_device, CL_TRUE, 0,
+            samp->queue_mem, samp->X_black_device, CL_FALSE, 0,
             samp->N * samp->K_over_two * sizeof(cl_float), samp->samples_host + buffer_position,
             0, NULL, NULL));
 
         buffer_position += samp->N * samp->K_over_two;
 
+        // both must finish before next iteration
+        CALL_CL_GUARDED(clFinish, (samp->queue_mem));
+        CALL_CL_GUARDED(clFinish, (samp->queue));
 
-        // update the black sample
+
+        // update X_black
         SET_7_KERNEL_ARGS(samp->stretch_knl,
               samp->X_black_device,
               samp->log_pdf_black_device,
@@ -573,12 +593,17 @@ void run_sampler(sampler *samp){
                /*dimensions*/ 1, NULL, samp->gdim, samp->ldim,
                0, NULL, NULL));
 
+        // read the constant samples while others are updating
         CALL_CL_GUARDED(clEnqueueReadBuffer, (
-            samp->queue, samp->X_black_device, CL_TRUE, 0,
+            samp->queue_mem, samp->X_red_device, CL_FALSE, 0,
             samp->N * samp->K_over_two * sizeof(cl_float), samp->samples_host + buffer_position,
             0, NULL, NULL));
 
         buffer_position += samp->N * samp->K_over_two;
+
+        // both must finish before next iteration
+        CALL_CL_GUARDED(clFinish, (samp->queue_mem));
+        CALL_CL_GUARDED(clFinish, (samp->queue));
 
         if( ((it % (MAX(samp->M/10,1))) == 0) && (OUTPUT_LEVEL > 0) )
             printf("Sample iteration %d\n", it);

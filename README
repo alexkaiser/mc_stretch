@@ -1,5 +1,5 @@
 
-Stretch-Move Markov chain Monte Carlo in C and OpenCL. 
+Fast, GPU parallel Markov chain Monte Carlo. 
 
 Much more detail in readme_stretch_move_ocl.pdf. 
 
@@ -11,10 +11,10 @@ __________________________________________________
 Follow these steps to get started quickly with the included examples. 
 
 
- - Place generic C code to evaluate the log of the probability density function (pdf) you would like to sample in "pdf.h."
+ - Place generic C code to evaluate the log of the probability density function (pdf) you would like to sample in ``pdf.h.'' 
 
  - Pick one of the included examples in "stretch_move_main.c" to run. Check that parameters in the example match your problem, which usually means setting the correct dimension.
 
- - Build the code with the included makefile. 
+ - Type "make" on the command line to build the code with the included makefile. 
 
- - Run the executable. The code will prompt to select an OpenCL implementation and hardware, then run the sampler. 
+ - Type "./stretch_move_main" to run the executable. The code will prompt to select an OpenCL implementation and hardware, then run the sampler. 

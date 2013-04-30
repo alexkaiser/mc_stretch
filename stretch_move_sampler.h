@@ -99,6 +99,7 @@ typedef struct{
         // contexts and queues
         cl_context ctx;
         cl_command_queue queue;
+        cl_command_queue queue_mem;
 
         // work group size information
         size_t ldim[1];                             // Work group size
@@ -125,7 +126,7 @@ typedef struct{
 sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                             cl_int walkers_per_group, size_t work_group_size,
                             cl_int pdf_number,
-                            cl_int data_length, cl_float *data, data_struct *data_st,
+                            cl_int data_length, cl_float *data,
                             const char *plat_name, const char *dev_name);
 
 void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int annealing_loops, cl_int steps_per_loop);

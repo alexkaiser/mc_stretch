@@ -25,7 +25,7 @@ for j = 1:numSaved
     
     % Swap these lines to add error bars 
     % errorbar(centers, fhat, sigma_f_hat, 'r') ;
-    plot(centers, fhat, 'r') ;
+    bar(centers, fhat, 1.0) ;
     hold on
            
     title(sprintf('%s run:\nHistogram of X_{%d} of %d\nSteps, M = %d, Number of walkers = %d, Total Samples = %d', ...

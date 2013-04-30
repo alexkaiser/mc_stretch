@@ -13,4 +13,5 @@ stats_acor.txt
 stats_acor_ensemble.txt
 get_data.sh
 plot_hist_from_filesALT.m
+clean.m
 

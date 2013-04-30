@@ -33,7 +33,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 // if this is not defined
 #ifdef USE_LOCAL_DATA
-	#define DATA_ARRAY_TYPE  __local const float
+    #define DATA_ARRAY_TYPE  __local const float
 #else
     #define DATA_ARRAY_TYPE __global const float
 #endif
@@ -91,7 +91,7 @@ float log_pdf(float *x, __global const data_struct *data_st, DATA_ARRAY_TYPE *da
         //
 
         // The first elements of the data array are the means
-        DATA_ARRAY_TYPE *mu = data;   // mean
+        DATA_ARRAY_TYPE *mu       = data;
 
         // NN elements later is the inverse covariance matrix
         DATA_ARRAY_TYPE *inv_cov  = data + NN;

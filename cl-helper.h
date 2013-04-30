@@ -118,6 +118,12 @@ extern const char *CHOOSE_INTERACTIVELY;
 void create_context_on(const char *plat_name, const char*dev_name, cl_uint
     idx, cl_context *ctx, cl_command_queue *queue, int enable_profiling);
 
+// Exact same function but creates two queues
+// Added by Alex Kaiser
+void create_context_and_two_queues_on(const char *plat_name, const char*dev_name, cl_uint idx,
+    cl_context *ctx, cl_command_queue *queue, cl_command_queue *queue_mem, int enable_profiling);
+
+
 /* Read contents of file 'filename'.
  * Return as a new string. You must free the string when you're done with it.
  *

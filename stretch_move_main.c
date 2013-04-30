@@ -71,20 +71,15 @@ void example_simple(){
     cl_float *data_temp       = NULL;                     // Need to pass a NULL pointer for the data
     const char *plat_name     = CHOOSE_INTERACTIVELY;     // Choose the platform interactively at runtime
     const char *dev_name      = CHOOSE_INTERACTIVELY;     // Choose the device interactively at runtime
-    data_struct *data_st;                                 // Allocate this below
 
-    // Allocate the structure
-    data_st = (data_struct *) malloc(sizeof(data_struct));
-    if(!data_st) { perror("Allocation failure data_struct"); abort(); }
-
-    // initialize the sampler
+    // Initialize the sampler
     sampler *samp = initialize_sampler(chain_length, dimension, walkers_per_group, work_group_size,
-                                        pdf_number, data_length, data_temp, data_st, plat_name, dev_name);
+                                        pdf_number, data_length, data_temp, plat_name, dev_name);
 
-    // run burn-in for 5000 steps
+    // Run burn-in for 5000 steps
     run_burn_in(samp, 5000);
 
-    // run the sampler
+    // Run the sampler
     run_sampler(samp);
 
     // --------------------------------------------------------------------------
@@ -97,7 +92,7 @@ void example_simple(){
     // Dimension is (samp->N x samp->total_samples)
     // --------------------------------------------------------------------------
 
-    // free resources
+    // Free resources
     free_sampler(samp);
 }
 
@@ -118,11 +113,7 @@ void example_with_data(){
     cl_int pdf_number         = 1;                       // Use pdf 1 for this problem
     const char *plat_name     = CHOOSE_INTERACTIVELY;    // Choose the platform interactively at runtime
     const char *dev_name      = CHOOSE_INTERACTIVELY;    // Choose the device interactively at runtime
-    data_struct *data_st;                                // Allocate this below
 
-    // Allocate the structure
-    data_st = (data_struct *) malloc(sizeof(data_struct));
-    if(!data_st) { perror("Allocation failure data_struct"); abort(); }
 
     // Generate the mean and inverse covariance matrix
     // Pack mean first, then matrix
@@ -133,7 +124,7 @@ void example_with_data(){
     for(int i=0; i < dimension; i++)
         data[i] = (cl_float) i;
 
-    for(int i=dimension; i<data_length; i++){
+    for(int i=dimension; i < data_length; i++){
         data[i] = 0.0f;
     }
 
@@ -144,17 +135,20 @@ void example_with_data(){
     }
     data[ (dimension-1) + (dimension-1)*dimension + dimension ] = 2.0f;
 
-    // initialize the sampler
+
+    // Initialize the sampler
     sampler *samp = initialize_sampler(chain_length, dimension, walkers_per_group, work_group_size,
-                                        pdf_number, data_length, data, data_st, plat_name, dev_name);
+                                        pdf_number, data_length, data, plat_name, dev_name);
+
+    // Initialize samp->data_st here, values will be copied
 
 
-    // run burn-in
+    // Run burn-in
     int burn_length = 5000;
     run_burn_in(samp, burn_length);
 
 
-    // run the sampler
+    // Run the sampler
     run_sampler(samp);
 
     // --------------------------------------------------------------------------
@@ -167,17 +161,17 @@ void example_with_data(){
     // Dimension is (samp->N x samp->total_samples)
     // --------------------------------------------------------------------------
 
-    // print summary of the run including basic some statistics
+    // Print summary of the run including basic some statistics
     print_run_summary(samp);
 
-    // run acor to estimate autocorrelation time
+    // Run acor to estimate autocorrelation time
     run_acor(samp);
 
-    // output some histograms to Matlab, don't output gnuplot
+    // Output some histograms to Matlab, don't output gnuplot
     char matlab_hist = 1, gnuplot_hist = 0;
     output_histograms(samp, matlab_hist, gnuplot_hist);
 
-    // free resources
+    // Free resources
     free_sampler(samp);
 }
 
