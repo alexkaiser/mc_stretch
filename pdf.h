@@ -55,17 +55,17 @@ typedef struct{
 
 
 
-float log_pdf(float *x, data_struct data_st, DATA_ARRAY_TYPE *data){
+float log_pdf(float *x, __global const data_struct *data_st, DATA_ARRAY_TYPE *data){
     /*
     Evaluate denormalized log of the PDF.
 
     Input:
-        __local float *x                      Location at which to evaluate PDF
-        data_struct data_st                   Structure containing any additional scalars or statically defined arrays.
-        const DATA_ARRAY_TYPE float *data     Any observations or data.
+        float *x                        Location at which to evaluate PDF
+        data_struct data_st             Structure containing any additional scalars or statically defined arrays.
+        DATA_ARRAY_TYPE *data           Any observations or data.
 
     Output:
-        returned:                             Log of the denormalized pdf that we are going to sample.
+        returned:                       Log of the denormalized pdf that we are going to sample.
     */
 
     if(PDF_NUMBER==0){

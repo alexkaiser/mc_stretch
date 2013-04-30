@@ -48,15 +48,15 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 
 __kernel void stretch_move(
-    __global float *X_moving,                 // walkers to be updated
-    __global float *log_prob_moving,          // cached log probabilities of the moving walkers, will be updated 
-    __global const float *X_fixed,            // fixed walkers 
-    __global float4 *ranluxcltab,             // state information for random number generator 
-    __global unsigned long *accepted,         // number of samples accepted 
-    __global const float *data,               // data or observations
-    data_struct data_st){                     // structure with additional variables and parameters  
-    
-        
+    __global float *X_moving,                  // walkers to be updated
+    __global float *log_prob_moving,           // cached log probabilities of the moving walkers, will be updated 
+    __global const float *X_fixed,             // fixed walkers 
+    __global float4 *ranluxcltab,              // state information for random number generator 
+    __global unsigned long *accepted,          // number of samples accepted 
+    __global const float *data,                // data or observations
+    __global const data_struct *data_st){      // structure with additional variables and parameters  
+     
+      
     // start up data structures for the random number generator 
     // ranluxclstate is a struct of 7 * total_work_items float4 variables
     // storing the state of the generator.
@@ -80,7 +80,7 @@ __kernel void stretch_move(
     // random numbers go here 
     float4 xi; 
         
-	#ifdef USE_LOCAL_DATA
+	#ifdef USE_LOCAL_DATA 
     	// allocate more local for the observation arrays 
     	__local float data_local[DATA_LEN]; 
     	for(int i=lid; i<DATA_LEN; i += work_group_size)
@@ -119,7 +119,7 @@ __kernel void stretch_move(
         }
         else{
             log_pxk = log_prob_moving[k];  
-            q   = pow(z, NN-1) * exp( data_st.beta * (log_py - log_pxk)) ; 
+            q   = pow(z, NN-1) * exp( data_st->beta * (log_py - log_pxk)) ; 
         }
          
         // accept and update

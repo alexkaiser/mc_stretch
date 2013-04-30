@@ -62,24 +62,27 @@ void example_simple(){
     // Simple example of running the sampler.
 
     // User set parameters
-    cl_int chain_length = 100000;                     // Allocate to store this much chain, sampler runs this many steps at once
-    cl_int dimension = 10;                            // Dimension of the state vector
-    cl_int walkers_per_group = 1024;                  // Total number of walkers is twice this
-    size_t work_group_size = 128;                     // Work group size. Use 1 for CPU, larger number for GPU
-    cl_int pdf_number = 0;                            // Use Gaussian debug problem
-    cl_int data_length = 0;                           // No data for this example
-    cl_float *data_temp = NULL;                       // Need to pass a NULL pointer for the data
-    data_struct data_st;                              // Don't use this either, leave it uninitialized
-    const char *plat_name = CHOOSE_INTERACTIVELY;     // Choose the platform interactively at runtime
-    const char *dev_name  = CHOOSE_INTERACTIVELY;     // Choose the device interactively at runtime
+    cl_int chain_length       = 10000;                    // Allocate to store this much chain, sampler runs this many steps at once
+    cl_int dimension          = 10;                       // Dimension of the state vector
+    cl_int walkers_per_group  = 1024;                     // Total number of walkers is twice this
+    size_t work_group_size    = 128;                      // Work group size. Use 1 for CPU, larger number for GPU
+    cl_int pdf_number         = 0;                        // Use Gaussian debug problem
+    cl_int data_length        = 0;                        // No data for this example
+    cl_float *data_temp       = NULL;                     // Need to pass a NULL pointer for the data
+    const char *plat_name     = CHOOSE_INTERACTIVELY;     // Choose the platform interactively at runtime
+    const char *dev_name      = CHOOSE_INTERACTIVELY;     // Choose the device interactively at runtime
+    data_struct *data_st;                                 // Allocate this below
 
+    // Allocate the structure
+    data_st = (data_struct *) malloc(sizeof(data_struct));
+    if(!data_st) { perror("Allocation failure data_struct"); abort(); }
 
     // initialize the sampler
     sampler *samp = initialize_sampler(chain_length, dimension, walkers_per_group, work_group_size,
                                         pdf_number, data_length, data_temp, data_st, plat_name, dev_name);
 
-    // run burn-in for 10000 steps
-    run_burn_in(samp, 10000);
+    // run burn-in for 5000 steps
+    run_burn_in(samp, 5000);
 
     // run the sampler
     run_sampler(samp);
@@ -108,20 +111,24 @@ void example_with_data(){
 
 
     // User set parameters
-    cl_int chain_length = 10000;                      // Allocate to store this much chain, sampler runs this many steps at once
-    cl_int dimension = 10 ;                           // Dimension of the state vector
-    cl_int walkers_per_group = 4096;                  // Total number of walkers is twice this
-    size_t work_group_size = 128;                     // Work group size. Use 1 for CPU, larger number for GPU
-    cl_int pdf_number = 1;                            // Use pdf 1 for this problem
-    const char *plat_name = CHOOSE_INTERACTIVELY;     // Choose the platform interactively at runtime
-    const char *dev_name  = CHOOSE_INTERACTIVELY;     // Choose the device interactively at runtime
-    data_struct data_st;                              // Don't use this, leave it uninitialized
+    cl_int chain_length       = 10000;                   // Allocate to store this much chain, sampler runs this many steps at once
+    cl_int dimension          = 10 ;                     // Dimension of the state vector
+    cl_int walkers_per_group  = 2048;                    // Total number of walkers is twice this
+    size_t work_group_size    = 128;                     // Work group size. Use 1 for CPU, larger number for GPU
+    cl_int pdf_number         = 1;                       // Use pdf 1 for this problem
+    const char *plat_name     = CHOOSE_INTERACTIVELY;    // Choose the platform interactively at runtime
+    const char *dev_name      = CHOOSE_INTERACTIVELY;    // Choose the device interactively at runtime
+    data_struct *data_st;                                // Allocate this below
 
+    // Allocate the structure
+    data_st = (data_struct *) malloc(sizeof(data_struct));
+    if(!data_st) { perror("Allocation failure data_struct"); abort(); }
 
     // Generate the mean and inverse covariance matrix
-    // Pack mean first, then invrse covariance
+    // Pack mean first, then matrix
     cl_int data_length = dimension + dimension*dimension;
     cl_float *data = (cl_float *) malloc(data_length * sizeof(cl_float)) ;
+    if(!data) { perror("Allocation failure data"); abort(); }
 
     for(int i=0; i < dimension; i++)
         data[i] = (cl_float) i;
@@ -143,7 +150,7 @@ void example_with_data(){
 
 
     // run burn-in
-    int burn_length = 20000;
+    int burn_length = 5000;
     run_burn_in(samp, burn_length);
 
 

@@ -17,7 +17,7 @@ endif
 
 
 stretch_move_main: stretch_move_main.o cl-helper.o stretch_move_util.o stretch_move_sampler.o
-	gcc $(LDLIBS) $(CLFAGS) -o stretch_move_main $^
+	gcc $(LDLIBS) $(CFLAGS) -o stretch_move_main $^
 
 stretch_move_main.o: stretch_move_main.c 
 	gcc -c $(CFLAGS) stretch_move_main.c

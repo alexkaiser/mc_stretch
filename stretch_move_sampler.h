@@ -54,6 +54,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #define OUTPUT_LEVEL 2
 
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
+
 typedef struct{
 
         // user set parameters
@@ -71,23 +75,23 @@ typedef struct{
         //     X_red_host[i + j*samp->N];
 
         // host arrays
-        cl_float *X_red_host;                // red walkers
-        cl_float *log_pdf_red_host;          // stored log pdf values
-        cl_float *X_black_host;              // black walkers
-        cl_float *log_pdf_black_host;        // stored log pdf values
-        cl_ulong *accepted_host;             // number accepted on each work item
-        unsigned long accepted_total;        // total number accepted
-        cl_float *samples_host;              // the samples of the distribution
-        cl_float *data_host;                 // observation data
-        cl_int data_length;                  // number of observations
-        data_struct data_st;                 // structure for additional static data
+        cl_float *X_red_host;                // Red walkers
+        cl_float *log_pdf_red_host;          // Stored log pdf values
+        cl_float *X_black_host;              // Black walkers
+        cl_float *log_pdf_black_host;        // Stored log pdf values
+        cl_ulong *accepted_host;             // Number accepted on each work item
+        unsigned long accepted_total;        // Total number accepted
+        cl_float *samples_host;              // The samples of the distribution
+        cl_float *data_host;                 // Observation data
+        cl_int data_length;                  // Number of observations
+        data_struct *data_st;                // Structure for additional static data
 
         // store acor times for making histograms
         double *acor_times;
 
         // time stamps
-        timestamp_type time1_total, time2_total;    // for total time
-        timestamp_type time1, time2;                // for kernel time
+        timestamp_type time1_total, time2_total;    // For total time
+        timestamp_type time1, time2;                // For kernel time
 
 
         // OpenCL data
@@ -97,21 +101,22 @@ typedef struct{
         cl_command_queue queue;
 
         // work group size information
-        size_t ldim[1];                             // work group size
-        size_t gdim[1];                             // total dimension
+        size_t ldim[1];                             // Work group size
+        size_t gdim[1];                             // Total dimension
 
         // kernels
-        cl_kernel stretch_knl;                      // sampler kernel
-        cl_kernel init_rand_lux_knl;                // random number generator initialization
+        cl_kernel stretch_knl;                      // Sampler kernel
+        cl_kernel init_rand_lux_knl;                // Random number generator initialization
 
         // device memory
-        cl_mem X_red_device ;                       // one array of walkers
-        cl_mem log_pdf_red_device ;                 // stored log pdf values
-        cl_mem X_black_device ;                     // one array of walkers
-        cl_mem log_pdf_black_device ;               // stored log pdf values
-        cl_mem accepted_device ;                    // number accepted on each work item
-        cl_mem data_device ;                        // data array
-        cl_mem ranluxcltab;                         // state array for randluxcl
+        cl_mem X_red_device;                       // One array of walkers
+        cl_mem log_pdf_red_device;                 // Stored log pdf values
+        cl_mem X_black_device;                     // One array of walkers
+        cl_mem log_pdf_black_device;               // Stored log pdf values
+        cl_mem accepted_device;                    // Number accepted on each work item
+        cl_mem data_device;                        // Data array
+        cl_mem ranluxcltab;                        // State array for randluxcl
+        cl_mem data_st_device;                     // Struct for user data
 
 }sampler;
 
@@ -120,7 +125,7 @@ typedef struct{
 sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                             cl_int walkers_per_group, size_t work_group_size,
                             cl_int pdf_number,
-                            cl_int data_length, cl_float *data, data_struct data_st,
+                            cl_int data_length, cl_float *data, data_struct *data_st,
                             const char *plat_name, const char *dev_name);
 
 void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int annealing_loops, cl_int steps_per_loop);

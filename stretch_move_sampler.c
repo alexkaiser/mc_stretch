@@ -33,7 +33,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                             cl_int walkers_per_group, size_t work_group_size,
                             cl_int pdf_number,
-                            cl_int data_length, cl_float *data, data_struct data_st,
+                            cl_int data_length, cl_float *data, data_struct *data_st,
                             const char *plat_name, const char *dev_name){
 
     /*
@@ -84,14 +84,14 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     samp->K_over_two = walkers_per_group ;            // Number of walkers in each group
 
     // derived parameters
-    samp->K = 2 * samp->K_over_two;                       // Total walkers
-    samp->total_samples = samp->M * samp->K;              // Total samples produced
+    samp->K = 2 * samp->K_over_two;                   // Total walkers
+    samp->total_samples = samp->M * samp->K;          // Total samples produced
 
     // user set data struct
     samp->data_st = data_st;
 
     // default value one, unless performing simulated annealing
-    (samp->data_st).beta = 1.0f;
+    (samp->data_st)->beta = 1.0f;
 
     // error check on dimensions
     if(samp->K <= samp->N){
@@ -109,6 +109,8 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     // for later output
     samp->acor_times = (double *) malloc(samp->N * sizeof(double));
 
+    // write parameter file for plotting
+    write_parameter_file_matlab(samp->M, samp->N, samp->K, "Stretch Move", samp->N, pdf_number);
 
     // --------------------------------------------------------------------------
     // Set up OpenCL context and queues
@@ -164,18 +166,13 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     if(!(samp->log_pdf_black_host)){ perror("Allocation failure X_red_host"); abort(); }
     for(int i=0; i< (samp->K_over_two); i++) samp->log_pdf_black_host[i] = (-1.0f) / 0.0f;
 
-
-
-    // write parameter file for plotting
-    write_parameter_file_matlab(samp->M, samp->N, samp->K, "Stretch Move", samp->N, pdf_number);
-
-
+    // samples on host
     cl_int samples_length = samp->N * samp->M * samp->K;                // length of the samples array
     samp->samples_host = (cl_float *) malloc(samples_length * sizeof(cl_float));         // samples to return
     if(!(samp->samples_host)){ perror("Allocation failure samples_host"); abort(); }
 
 
-
+    // intialize the walkers to random values
     // set the seed value
     srand48(0);
 
@@ -274,6 +271,11 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
       sizeof(cl_float) * samp->data_length, 0, &status);
     CHECK_CL_ERROR(status, "clCreateBuffer");
 
+    // data struct on device
+    samp->data_st_device = clCreateBuffer(samp->ctx, CL_MEM_READ_WRITE,
+            sizeof(data_struct), 0, &status);
+    CHECK_CL_ERROR(status, "clCreateBuffer");
+
 
     // allocate for the state array for randluxcl
     // use a 1d work group
@@ -310,6 +312,11 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     CALL_CL_GUARDED(clEnqueueWriteBuffer, (
         samp->queue, samp->data_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
         samp->data_length * sizeof(cl_float), samp->data_host,
+        0, NULL, NULL));
+
+    CALL_CL_GUARDED(clEnqueueWriteBuffer, (
+        samp->queue, samp->data_st_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
+        sizeof(data_struct), samp->data_st,
         0, NULL, NULL));
 
     CALL_CL_GUARDED(clFinish, (samp->queue));
@@ -359,7 +366,14 @@ void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int a
     for(int annealing_step=0; annealing_step<annealing_loops; annealing_step++){
 
         // set the beta value for this iteration
-        (samp->data_st).beta = cooling_schedule[annealing_step];
+        (samp->data_st)->beta = cooling_schedule[annealing_step];
+
+        // update the data structure accordingly
+        CALL_CL_GUARDED(clEnqueueWriteBuffer, (
+            samp->queue, samp->data_st_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
+            sizeof(data_struct), samp->data_st,
+            0, NULL, NULL));
+        CALL_CL_GUARDED(clFinish, (samp->queue));
 
         for(int it=0; it<steps_per_loop; it++){
             SET_7_KERNEL_ARGS(samp->stretch_knl,
@@ -369,7 +383,7 @@ void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int a
                   samp->ranluxcltab,
                   samp->accepted_device,
                   samp->data_device,
-                  samp->data_st);
+                  samp->data_st_device);
 
             CALL_CL_GUARDED(clEnqueueNDRangeKernel,
                   (samp->queue, samp->stretch_knl,
@@ -383,7 +397,7 @@ void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int a
                   samp->ranluxcltab,
                   samp->accepted_device,
                   samp->data_device,
-                  samp->data_st);
+                  samp->data_st_device);
 
             CALL_CL_GUARDED(clEnqueueNDRangeKernel,
                   (samp->queue, samp->stretch_knl,
@@ -424,7 +438,14 @@ void run_burn_in(sampler *samp, int burn_length){
      */
 
     // reset beta
-    (samp->data_st).beta = 1.0f;
+    (samp->data_st)->beta = 1.0f;
+
+    // update the data structure accordingly
+    CALL_CL_GUARDED(clEnqueueWriteBuffer, (
+        samp->queue, samp->data_st_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
+        sizeof(data_struct), samp->data_st,
+        0, NULL, NULL));
+    CALL_CL_GUARDED(clFinish, (samp->queue));
 
     // do the burn in
     for(int it=0; it<burn_length; it++){
@@ -436,7 +457,7 @@ void run_burn_in(sampler *samp, int burn_length){
               samp->ranluxcltab,
               samp->accepted_device,
               samp->data_device,
-              samp->data_st );
+              samp->data_st_device );
 
         CALL_CL_GUARDED(clEnqueueNDRangeKernel,
               (samp->queue, samp->stretch_knl,
@@ -450,7 +471,7 @@ void run_burn_in(sampler *samp, int burn_length){
               samp->ranluxcltab,
               samp->accepted_device,
               samp->data_device,
-              samp->data_st);
+              samp->data_st_device);
 
         CALL_CL_GUARDED(clEnqueueNDRangeKernel,
               (samp->queue, samp->stretch_knl,
@@ -458,8 +479,9 @@ void run_burn_in(sampler *samp, int burn_length){
                0, NULL, NULL));
 
         CALL_CL_GUARDED(clFinish, (samp->queue));
-        if( ((it % (burn_length/10)) == 0) && (OUTPUT_LEVEL > 0) )
-            printf("Burn iteration %d\n", it);
+
+        if( ((it % MAX((burn_length/10),1)) == 0) && (OUTPUT_LEVEL > 0))
+                printf("Burn iteration %d\n", it);
     }
 
 
@@ -497,7 +519,14 @@ void run_sampler(sampler *samp){
     get_timestamp(& (samp->time1));
 
     // reset beta
-    (samp->data_st).beta = 1.0f;
+    (samp->data_st)->beta = 1.0f;
+
+    // update the data structure accordingly
+    CALL_CL_GUARDED(clEnqueueWriteBuffer, (
+        samp->queue, samp->data_st_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
+        sizeof(data_struct), samp->data_st,
+        0, NULL, NULL));
+    CALL_CL_GUARDED(clFinish, (samp->queue));
 
     // run the sampler
     unsigned int buffer_position = 0;
@@ -513,7 +542,7 @@ void run_sampler(sampler *samp){
               samp->ranluxcltab,
               samp->accepted_device,
               samp->data_device,
-              samp->data_st);
+              samp->data_st_device);
 
         CALL_CL_GUARDED(clEnqueueNDRangeKernel,
               (samp->queue, samp->stretch_knl,
@@ -537,7 +566,7 @@ void run_sampler(sampler *samp){
               samp->ranluxcltab,
               samp->accepted_device,
               samp->data_device,
-              samp->data_st);
+              samp->data_st_device);
 
         CALL_CL_GUARDED(clEnqueueNDRangeKernel,
               (samp->queue, samp->stretch_knl,
@@ -551,7 +580,7 @@ void run_sampler(sampler *samp){
 
         buffer_position += samp->N * samp->K_over_two;
 
-        if( ((it % (samp->M/10)) == 0) && (OUTPUT_LEVEL > 0) )
+        if( ((it % (MAX(samp->M/10,1))) == 0) && (OUTPUT_LEVEL > 0) )
             printf("Sample iteration %d\n", it);
 
     }
@@ -760,6 +789,7 @@ void free_sampler(sampler* samp){
     CALL_CL_GUARDED(clReleaseMemObject, (samp->accepted_device));
     CALL_CL_GUARDED(clReleaseMemObject, (samp->data_device));
     CALL_CL_GUARDED(clReleaseMemObject, (samp->ranluxcltab));
+    CALL_CL_GUARDED(clReleaseMemObject, (samp->data_st_device));
 
     // kernels, context and queues
     CALL_CL_GUARDED(clReleaseKernel,       (samp->stretch_knl));
@@ -775,6 +805,7 @@ void free_sampler(sampler* samp){
     free(samp->samples_host);
     free(samp->accepted_host);
     free(samp->data_host);
+    free(samp->data_st);
 
     // data resources
     free(samp->acor_times);
