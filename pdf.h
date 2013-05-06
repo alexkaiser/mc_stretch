@@ -117,6 +117,26 @@ float log_pdf(float *x, __global const data_struct *data_st, DATA_ARRAY_TYPE *da
         return -0.5f * sum;
     }
 
+    if(PDF_NUMBER==2){
+        // Gaussian string with restriction
+        // PDF is identical, but restricted to the case when all components
+        // of the sample are non-negative
+        float sum = x[0]*x[0] + x[NN-1]*x[NN-1];
+        for(int i=0; i<NN-1; i++){
+
+            // abort trap for the nonnegative case
+            if(x[i] < 0)
+                return (-1.0f)/0.0f;
+
+            sum += (x[i+1] - x[i]) * (x[i+1] - x[i]);
+        }
+
+        // abort trap for the nonnegative case
+        if(x[NN-1] < 0)
+            return (-1.0f)/0.0f;
+
+        return -0.5f * sum;
+    }
 
     // No PDF selected.
     // Sampler then does nothing.
