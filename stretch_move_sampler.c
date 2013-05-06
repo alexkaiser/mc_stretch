@@ -629,6 +629,9 @@ void run_sampler(sampler *samp){
     for(int i=0; i<samp->K_over_two; i++)
         samp->accepted_total += samp->accepted_host[i];
 
+    // end total timing
+    get_timestamp(&(samp->time2_total));
+
     if(OUTPUT_LEVEL > 0) printf("Sampler kernel ran and completed.\n\n");
 
 }
@@ -649,7 +652,6 @@ void print_run_summary(sampler *samp){
 
     double elapsed_sample = timestamp_diff_in_seconds(samp->time1, samp->time2);
 
-    get_timestamp(&(samp->time2_total));
     double elapsed_total = timestamp_diff_in_seconds(samp->time1_total, samp->time2_total);
 
     // --------------------------------------------------------------------------
