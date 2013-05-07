@@ -822,6 +822,7 @@ void free_sampler(sampler* samp){
     CALL_CL_GUARDED(clReleaseKernel,       (samp->stretch_knl));
     CALL_CL_GUARDED(clReleaseKernel,       (samp->init_rand_lux_knl));
     CALL_CL_GUARDED(clReleaseCommandQueue, (samp->queue));
+    CALL_CL_GUARDED(clReleaseCommandQueue, (samp->queue_mem));
     CALL_CL_GUARDED(clReleaseContext,      (samp->ctx));
 
     // free host resources
