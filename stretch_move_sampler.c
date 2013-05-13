@@ -716,7 +716,7 @@ void run_acor(sampler *samp){
 
     // use every ensemble mean
     int L = samp->M;
-    int acor_status;
+    int acor_pass;
 
     // For each component
     for(int i=0; i<samp->N; i++){
@@ -730,20 +730,20 @@ void run_acor(sampler *samp){
         }
 
         // generate the statistics.
-        acor_status = acor(&mean, &sigma, &tau, ensemble_means, L);
+        acor_pass = acor(&mean, &sigma, &tau, ensemble_means, L);
 
         samp->acor_times[i] = tau;
 
-        if(acor_status){
-            printf("Acor error on component %d\n", i);
+        if(!acor_pass){
+            printf("Acor error on component %d. Stats unreliable or just plain wrong.\n", i);
         }
 
         printf("Acor ensemble statistics for X_%d:\t", i);
-        printf("Mean = %f,\tsigma = %f,\tAutocorrelation time tau %f", mean, sigma, tau);
+        printf("mean = %f,\tsigma = %f,\tautocorrelation time, tau = %f", mean, sigma, tau);
 
-        if(!acor_status)
+        if(acor_pass)
             // acor passed
-            printf(",\tEffective independent samples: %d\n", (int) (samp->total_samples / tau));
+            printf(",\teffective independent samples = %d\n", (int) (samp->total_samples / tau));
         else
             printf("\n");
 

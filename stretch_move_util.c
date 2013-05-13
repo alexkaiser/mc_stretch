@@ -314,6 +314,8 @@ void compute_mean_stddev(float *X, double *mean, double *sigma, int total_sample
 
 
 int acor( double *mean, double *sigma, double *tau, double *X, int L){
+
+   int pass = 1;
    
    *mean = 0.;                                   // Compute the mean of X ... 
    for ( int i = 0; i < L; i++) *mean += X[i];
@@ -322,7 +324,7 @@ int acor( double *mean, double *sigma, double *tau, double *X, int L){
    
    if ( L < MINFAC*MAXLAG ) {
       fprintf(stderr, "Acor error 1: The autocorrelation time is too long relative to the variance.\n"); 
-      return 1; }
+      return 0; }
    
    double C[MAXLAG+1];
    for ( int s = 0; s <= MAXLAG; s++ )  C[s] = 0.;  // Here, s=0 is the variance, s = MAXLAG is the last one computed.
@@ -338,7 +340,7 @@ int acor( double *mean, double *sigma, double *tau, double *X, int L){
    *sigma = sqrt( D / L );                            // The standard error bar formula, if D were the complete sum.
    *tau   = D / C[0];                                 // A provisional estimate, since D is only part of the complete sum.
    
-   if ( *tau*WINMULT < MAXLAG ) return 0;             // Stop if the D sum includes the given multiple of tau.
+   if ( *tau*WINMULT < MAXLAG ) return pass;             // Stop if the D sum includes the given multiple of tau.
                                                       // This is the self consistent window approach.
                                                       
    else {                                             // If the provisional tau is so large that we don't think tau
@@ -352,12 +354,12 @@ int acor( double *mean, double *sigma, double *tau, double *X, int L){
          X[i] = X[j1] + X[j2];
          j1  += 2;
          j2  += 2; }
-      acor( &newMean, sigma, tau, X, Lh);
+      pass &= acor( &newMean, sigma, tau, X, Lh);
       D      = .25*(*sigma) * (*sigma) * L;    // Reconstruct the fine time series numbers from the coarse series numbers.
       *tau   = D/C[0];                         // As before, but with a corrected D.
       *sigma = sqrt( D/L );                    // As before, again.
     }
       
      
-   return 0;
+   return pass;
   }

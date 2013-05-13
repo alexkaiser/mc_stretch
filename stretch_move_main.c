@@ -65,7 +65,7 @@ void example_simple(){
     cl_int chain_length       = 10000;                    // Allocate to store this much chain, sampler runs this many steps at once
     cl_int dimension          = 10;                       // Dimension of the state vector
     cl_int walkers_per_group  = 1024;                     // Total number of walkers is twice this
-    size_t work_group_size    = 128;                      // Work group size. Use 1 for CPU, larger number for GPU
+    size_t work_group_size    = 32;                       // Work group size. Use 1 for CPU, larger number for GPU
     cl_int pdf_number         = 0;                        // Use Gaussian debug problem
     cl_int data_length        = 0;                        // No data for this example
     cl_float *data_temp       = NULL;                     // Need to pass a NULL pointer for the data
@@ -77,7 +77,8 @@ void example_simple(){
                                         pdf_number, data_length, data_temp, plat_name, dev_name);
 
     // Run burn-in for 5000 steps
-    run_burn_in(samp, 5000);
+    int burn_length = 5000;
+    run_burn_in(samp, burn_length);
 
     // Run the sampler
     run_sampler(samp);
@@ -107,9 +108,9 @@ void example_with_data(){
 
     // User set parameters
     cl_int chain_length       = 10000;                   // Allocate to store this much chain, sampler runs this many steps at once
-    cl_int dimension          = 10 ;                     // Dimension of the state vector
+    cl_int dimension          = 10;                      // Dimension of the state vector
     cl_int walkers_per_group  = 2048;                    // Total number of walkers is twice this
-    size_t work_group_size    = 128;                     // Work group size. Use 1 for CPU, larger number for GPU
+    size_t work_group_size    = 32;                      // Work group size. Use 1 for CPU, larger number for GPU
     cl_int pdf_number         = 1;                       // Use pdf 1 for this problem
     const char *plat_name     = CHOOSE_INTERACTIVELY;    // Choose the platform interactively at runtime
     const char *dev_name      = CHOOSE_INTERACTIVELY;    // Choose the device interactively at runtime
