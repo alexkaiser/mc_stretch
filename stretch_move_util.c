@@ -85,7 +85,7 @@ void output_array_to_matlab(cl_float *data, int m, int n, char *file_name){
 }
 
 
-void write_parameter_file_matlab(int M, int N, int K, char *sampler_name, int num_to_save, int pdf_num){
+void write_parameter_file_matlab(int M, int N, int K, char *sampler_name, int *indices_to_save, int num_to_save, int pdf_num){
     /*
      Write a parameter summary to a Matlab file for reading.
      Includes basic parameters of the sampler to include in plots.
@@ -106,12 +106,12 @@ void write_parameter_file_matlab(int M, int N, int K, char *sampler_name, int nu
     fprintf(f, "M = %d;\n", M);
     fprintf(f, "N = %d;\n", N);
     fprintf(f, "K = %d;\n", K);
-    fprintf(f, "pdf_num = %d;\n", pdf_num);
     fprintf(f, "name = '%s';\n", sampler_name);
+    fprintf(f, "pdf_num = %d;\n", pdf_num);
     fprintf(f, "indicesToSave = [");
     for(int j=0; j<num_to_save-1; j++)
-        fprintf(f, "%d; ", j+1);                // add one to index for matlab
-    fprintf(f, "%d];\n\n", num_to_save-1 + 1);  
+        fprintf(f, "%d; ", indices_to_save[j]+1);                // add one to index for matlab
+    fprintf(f, "%d];\n\n", indices_to_save[num_to_save-1]+1);
     fclose(f);
 }
 

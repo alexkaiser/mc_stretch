@@ -34,6 +34,7 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                             cl_int walkers_per_group, size_t work_group_size,
                             cl_int pdf_number,
                             cl_int data_length, cl_float *data,
+                            cl_int num_to_save, cl_int *indices_to_save,
                             const char *plat_name, const char *dev_name){
 
     /*
@@ -57,6 +58,8 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                                                  This number must divide walkers_per_group.
           cl_int data_length                 Length of observation data. If no data set this to zero.
           cl_float *data                     Observation data.
+          cl_int num_to_save                 Number of components to save in the chain
+          cl_int *indices_to_save            Indices of components to save in the chain
           const char *plat_name              String for platform name. Set to CHOOSE_INTERACTIVELY (no quotes) to do so.
           const char *dev_name               String for device name. Set to CHOOSE_INTERACTIVELY (no quotes) to do so.
 
@@ -89,13 +92,18 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     samp->K = 2 * samp->K_over_two;                   // Total walkers
     samp->total_samples = samp->M * samp->K;          // Total samples produced
 
-    // Allocate the structure
+    // indices to save
+    samp->num_to_save = num_to_save;
+    samp->indices_to_save_host = indices_to_save;
+
+    // Allocate the structure and set values
     samp->data_st = (data_struct *) malloc(sizeof(data_struct));
     if(!(samp->data_st)) { perror("Allocation failure data_struct"); abort(); }
 
-
     // default value one, unless performing simulated annealing
-    (samp->data_st)->beta = 1.0f;
+    (samp->data_st)->beta         = 1.0f;
+    (samp->data_st)->save         = 1;
+    (samp->data_st)->num_to_save  = num_to_save;
 
     // error check on dimensions
     if(samp->K <= samp->N){
@@ -109,19 +117,29 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
         abort();
     }
 
+    // error check on dimensions to save
+    for(int i=0; i<num_to_save; i++){
+        if(samp->indices_to_save_host[i] >= samp->N){
+            fprintf(stderr, "Error: Cannot save an index larger than the dimension of the problem.\nExiting\n");
+            abort();
+        }
+    }
+
+
 
     // for later output
-    samp->acor_times = (double *) malloc(samp->N * sizeof(double));
+    samp->acor_times = (double *) malloc(samp->num_to_save * sizeof(double));
 
     // write parameter file for plotting
-    write_parameter_file_matlab(samp->M, samp->N, samp->K, "Stretch Move", samp->N, pdf_number);
+    write_parameter_file_matlab(samp->M, samp->N, samp->K, "Stretch Move",
+                            samp->indices_to_save_host, samp->num_to_save, pdf_number);
 
     // --------------------------------------------------------------------------
     // Set up OpenCL context and queues
     // --------------------------------------------------------------------------
     if(OUTPUT_LEVEL > 0) printf("Begin opencl contexts.\n");
 
-    create_context_and_two_queues_on(plat_name, dev_name, 0, &(samp->ctx), &(samp->queue), &(samp->queue_mem) , 0);
+    create_context_and_two_queues_on(plat_name, dev_name, 0, &(samp->ctx), &(samp->queue), &(samp->queue_mem), 0);
 
     // print information on selected device
     if(OUTPUT_LEVEL > 1)  print_device_info_from_queue(samp->queue);
@@ -171,7 +189,7 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     for(int i=0; i< (samp->K_over_two); i++) samp->log_pdf_black_host[i] = (-1.0f) / 0.0f;
 
     // samples on host
-    cl_int samples_length = samp->N * samp->M * samp->K;                // length of the samples array
+    cl_int samples_length = samp->num_to_save * samp->M * samp->K;                // length of the samples array
     samp->samples_host = (cl_float *) malloc(samples_length * sizeof(cl_float));         // samples to return
     if(!(samp->samples_host)){ perror("Allocation failure samples_host"); abort(); }
 
@@ -194,7 +212,7 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     }
 
 
-    // copy the observations over
+    // set up observations
     samp->data_length = data_length;
 
     // there are lots of complications that appear if this is empty
@@ -257,6 +275,10 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
       sizeof(cl_float) * samp->K_over_two, 0, &status);
     CHECK_CL_ERROR(status, "clCreateBuffer");
 
+    samp->X_red_save = clCreateBuffer(samp->ctx, CL_MEM_WRITE_ONLY,
+      sizeof(cl_float) * samp->num_to_save * samp->K_over_two, 0, &status);
+    CHECK_CL_ERROR(status, "clCreateBuffer");
+
     samp->X_black_device = clCreateBuffer(samp->ctx, CL_MEM_READ_WRITE,
       sizeof(cl_float) * samp->N * samp->K_over_two, 0, &status);
     CHECK_CL_ERROR(status, "clCreateBuffer");
@@ -265,8 +287,16 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
       sizeof(cl_float) * samp->K_over_two, 0, &status);
     CHECK_CL_ERROR(status, "clCreateBuffer");
 
+    samp->X_black_save = clCreateBuffer(samp->ctx, CL_MEM_WRITE_ONLY,
+      sizeof(cl_float) * samp->num_to_save * samp->K_over_two, 0, &status);
+    CHECK_CL_ERROR(status, "clCreateBuffer");
+
     samp->accepted_device = clCreateBuffer(samp->ctx, CL_MEM_READ_WRITE,
             samp->K_over_two * sizeof(cl_ulong), 0, &status);
+    CHECK_CL_ERROR(status, "clCreateBuffer");
+
+    samp->indices_to_save_device = clCreateBuffer(samp->ctx, CL_MEM_READ_ONLY,
+            samp->num_to_save * sizeof(cl_int), 0, &status);
     CHECK_CL_ERROR(status, "clCreateBuffer");
 
 
@@ -323,6 +353,11 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
         sizeof(data_struct), samp->data_st,
         0, NULL, NULL));
 
+    CALL_CL_GUARDED(clEnqueueWriteBuffer, (
+        samp->queue, samp->indices_to_save_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
+        samp->num_to_save * sizeof(cl_int), samp->indices_to_save_host,
+        0, NULL, NULL));
+
     CALL_CL_GUARDED(clFinish, (samp->queue));
 
 
@@ -371,6 +406,7 @@ void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int a
 
         // set the beta value for this iteration
         (samp->data_st)->beta = cooling_schedule[annealing_step];
+        (samp->data_st)->save = 0;
 
         // update the data structure accordingly
         CALL_CL_GUARDED(clEnqueueWriteBuffer, (
@@ -380,28 +416,32 @@ void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int a
         CALL_CL_GUARDED(clFinish, (samp->queue));
 
         for(int it=0; it<steps_per_loop; it++){
-            SET_7_KERNEL_ARGS(samp->stretch_knl,
+            SET_9_KERNEL_ARGS(samp->stretch_knl,
                   samp->X_red_device,
                   samp->log_pdf_red_device,
                   samp->X_black_device,
                   samp->ranluxcltab,
                   samp->accepted_device,
                   samp->data_device,
-                  samp->data_st_device);
+                  samp->data_st_device,
+                  samp->indices_to_save_device,
+                  samp->X_red_save);
 
             CALL_CL_GUARDED(clEnqueueNDRangeKernel,
                   (samp->queue, samp->stretch_knl,
                    1, NULL, samp->gdim, samp->ldim,
                    0, NULL, NULL));
 
-            SET_7_KERNEL_ARGS(samp->stretch_knl,
+            SET_9_KERNEL_ARGS(samp->stretch_knl,
                   samp->X_black_device,
                   samp->log_pdf_black_device,
                   samp->X_red_device,
                   samp->ranluxcltab,
                   samp->accepted_device,
                   samp->data_device,
-                  samp->data_st_device);
+                  samp->data_st_device,
+                  samp->indices_to_save_device,
+                  samp->X_black_save);
 
             CALL_CL_GUARDED(clEnqueueNDRangeKernel,
                   (samp->queue, samp->stretch_knl,
@@ -443,6 +483,7 @@ void run_burn_in(sampler *samp, int burn_length){
 
     // reset beta
     (samp->data_st)->beta = 1.0f;
+    (samp->data_st)->save = 0;
 
     // update the data structure accordingly
     CALL_CL_GUARDED(clEnqueueWriteBuffer, (
@@ -454,28 +495,32 @@ void run_burn_in(sampler *samp, int burn_length){
     // do the burn in
     for(int it=0; it<burn_length; it++){
 
-        SET_7_KERNEL_ARGS(samp->stretch_knl,
+        SET_9_KERNEL_ARGS(samp->stretch_knl,
               samp->X_red_device,
               samp->log_pdf_red_device,
               samp->X_black_device,
               samp->ranluxcltab,
               samp->accepted_device,
               samp->data_device,
-              samp->data_st_device );
+              samp->data_st_device,
+              samp->indices_to_save_device,
+              samp->X_red_save );
 
         CALL_CL_GUARDED(clEnqueueNDRangeKernel,
               (samp->queue, samp->stretch_knl,
                1, NULL, samp->gdim, samp->ldim,
                0, NULL, NULL));
 
-        SET_7_KERNEL_ARGS(samp->stretch_knl,
+        SET_9_KERNEL_ARGS(samp->stretch_knl,
               samp->X_black_device,
               samp->log_pdf_black_device,
               samp->X_red_device,
               samp->ranluxcltab,
               samp->accepted_device,
               samp->data_device,
-              samp->data_st_device);
+              samp->data_st_device,
+              samp->indices_to_save_device,
+              samp->X_black_save);
 
         CALL_CL_GUARDED(clEnqueueNDRangeKernel,
               (samp->queue, samp->stretch_knl,
@@ -493,7 +538,9 @@ void run_burn_in(sampler *samp, int burn_length){
     CALL_CL_GUARDED(clFinish, (samp->queue));
 
     // reset the acceptance counter after the burn in
-    for(int i=0; i< (samp->K_over_two); i++) samp->accepted_host[i] = 0;
+    for(int i=0; i< (samp->K_over_two); i++)
+        samp->accepted_host[i] = 0;
+
     CALL_CL_GUARDED(clEnqueueWriteBuffer, (
         samp->queue, samp->accepted_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
         samp->K_over_two * sizeof(cl_ulong), samp->accepted_host,
@@ -532,10 +579,13 @@ void run_sampler(sampler *samp){
                                     Array samp->samples_host is filled with new samples.
      */
 
+
+    // start the kernel timer
     get_timestamp(& (samp->time1));
 
-    // reset beta
+    // reset beta and set to save
     (samp->data_st)->beta = 1.0f;
+    (samp->data_st)->save = 1;
 
     // update the data structure accordingly
     CALL_CL_GUARDED(clEnqueueWriteBuffer, (
@@ -544,34 +594,42 @@ void run_sampler(sampler *samp){
         0, NULL, NULL));
     CALL_CL_GUARDED(clFinish, (samp->queue));
 
+
     // run the sampler
     unsigned int buffer_position = 0;
 
+    // since samples are read while update takes place, do not read the first set of samples
+    char read_samples = 0;
 
-    for(int it=0; it<samp->M; it++){
+    // main sampling loop
+    for(int it=0; it < samp->M + 1; it++){
 
         // update X_red
-        SET_7_KERNEL_ARGS(samp->stretch_knl,
+        SET_9_KERNEL_ARGS(samp->stretch_knl,
               samp->X_red_device,
               samp->log_pdf_red_device,
               samp->X_black_device,
               samp->ranluxcltab,
               samp->accepted_device,
               samp->data_device,
-              samp->data_st_device);
+              samp->data_st_device,
+              samp->indices_to_save_device,
+              samp->X_red_save);
 
         CALL_CL_GUARDED(clEnqueueNDRangeKernel,
               (samp->queue, samp->stretch_knl,
                /*dimensions*/ 1, NULL, samp->gdim, samp->ldim,
                0, NULL, NULL));
 
-        // read the constant samples while others are updating
-        CALL_CL_GUARDED(clEnqueueReadBuffer, (
-            samp->queue_mem, samp->X_black_device, CL_FALSE, 0,
-            samp->N * samp->K_over_two * sizeof(cl_float), samp->samples_host + buffer_position,
-            0, NULL, NULL));
+        if(read_samples){
+            // read the constant samples while others are updating
+            CALL_CL_GUARDED(clEnqueueReadBuffer, (
+                samp->queue_mem, samp->X_black_save, CL_FALSE, 0,
+                samp->num_to_save * samp->K_over_two * sizeof(cl_float), samp->samples_host + buffer_position,
+                0, NULL, NULL));
 
-        buffer_position += samp->N * samp->K_over_two;
+            buffer_position += samp->num_to_save * samp->K_over_two;
+        }
 
         // both must finish before next iteration
         CALL_CL_GUARDED(clFinish, (samp->queue_mem));
@@ -579,27 +637,31 @@ void run_sampler(sampler *samp){
 
 
         // update X_black
-        SET_7_KERNEL_ARGS(samp->stretch_knl,
+        SET_9_KERNEL_ARGS(samp->stretch_knl,
               samp->X_black_device,
               samp->log_pdf_black_device,
               samp->X_red_device,
               samp->ranluxcltab,
               samp->accepted_device,
               samp->data_device,
-              samp->data_st_device);
+              samp->data_st_device,
+              samp->indices_to_save_device,
+              samp->X_black_save);
 
         CALL_CL_GUARDED(clEnqueueNDRangeKernel,
               (samp->queue, samp->stretch_knl,
                /*dimensions*/ 1, NULL, samp->gdim, samp->ldim,
                0, NULL, NULL));
 
-        // read the constant samples while others are updating
-        CALL_CL_GUARDED(clEnqueueReadBuffer, (
-            samp->queue_mem, samp->X_red_device, CL_FALSE, 0,
-            samp->N * samp->K_over_two * sizeof(cl_float), samp->samples_host + buffer_position,
-            0, NULL, NULL));
+        if(read_samples){
+            // read the constant samples while others are updating
+            CALL_CL_GUARDED(clEnqueueReadBuffer, (
+                samp->queue_mem, samp->X_red_save, CL_FALSE, 0,
+                samp->num_to_save * samp->K_over_two * sizeof(cl_float), samp->samples_host + buffer_position,
+                0, NULL, NULL));
 
-        buffer_position += samp->N * samp->K_over_two;
+            buffer_position += samp->num_to_save * samp->K_over_two;
+        }
 
         // both must finish before next iteration
         CALL_CL_GUARDED(clFinish, (samp->queue_mem));
@@ -608,6 +670,7 @@ void run_sampler(sampler *samp){
         if( ((it % (MAX(samp->M/10,1))) == 0) && (OUTPUT_LEVEL > 0) )
             printf("Sample iteration %d\n", it);
 
+        read_samples = 1;
     }
 
     // make sure everything is back in place
@@ -676,10 +739,10 @@ void print_run_summary(sampler *samp){
     float *X = (float *) malloc(samp->total_samples * sizeof(float));
     if(!X){ perror("Allocation failure basic stats"); abort(); }
 
-    for(int i=0; i<samp->N; i++){
+    for(int i=0; i<samp->num_to_save; i++){
 
         for(int j=0; j<samp->total_samples; j++)
-            X[j] = samp->samples_host[i + j * (samp->N)];
+            X[j] = samp->samples_host[i + j * (samp->num_to_save)];
 
         compute_mean_stddev(X, &mean, &sigma, samp->total_samples);
 
@@ -719,13 +782,13 @@ void run_acor(sampler *samp){
     int acor_pass;
 
     // For each component
-    for(int i=0; i<samp->N; i++){
+    for(int i=0; i<samp->num_to_save; i++){
 
         // calculate the ensemble mean for this time step
         for(int t=0; t<samp->M; t++){
             ensemble_means[t] = 0.0;
             for(int kk=0; kk<samp->K; kk++)
-                ensemble_means[t] += (double) samp->samples_host[i + (kk * samp->N) + t*(samp->N * samp->K)];
+                ensemble_means[t] += (double) samp->samples_host[i + (kk * samp->num_to_save) + t*(samp->num_to_save * samp->K)];
             ensemble_means[t] /= ((double) samp->K);
         }
 
@@ -735,7 +798,7 @@ void run_acor(sampler *samp){
         samp->acor_times[i] = tau;
 
         if(!acor_pass){
-            printf("Acor error on component %d. Stats unreliable or just plain wrong.\n", i);
+            printf("Acor error on component %d. Stats unreliable or just plain wrong.\n", samp->indices_to_save_host[i]);
         }
 
         printf("Acor ensemble statistics for X_%d:\t", i);
@@ -782,18 +845,18 @@ void output_histograms(sampler *samp, char matlab_hist, char gnuplot_hist){
     float *X = (float *) malloc(samp->total_samples * sizeof(float));
     if(!X){ perror("Allocation failure Histogram"); abort(); }
 
-    for(int i=0; i< (samp->N); i++){
+    for(int i=0; i<samp->num_to_save; i++){
 
-        for(int j=0; j < (samp->total_samples); j++)
-            X[j] = samp->samples_host[i + j * samp->N];
+        for(int j=0; j < samp->total_samples; j++)
+            X[j] = samp->samples_host[i + j*(samp->num_to_save)];
 
         tau = samp->acor_times[i];
         histogram_data(n_bins, X, samp->total_samples, tau, centers, f_hat, sigma_f_hat);
 
         if(matlab_hist)
-            histogram_to_matlab(n_bins, centers, f_hat, sigma_f_hat, i+1); // add one for matlab index
+            histogram_to_matlab(n_bins, centers, f_hat, sigma_f_hat, (samp->indices_to_save_host[i])+1); // add one for matlab index
         if(gnuplot_hist)
-            histogram_to_gnuplot(n_bins, centers, f_hat, i);
+            histogram_to_gnuplot(n_bins, centers, f_hat, samp->indices_to_save_host[i]);
     }
 
     free(centers);
@@ -811,12 +874,15 @@ void free_sampler(sampler* samp){
     // free up OpenCL memory
     CALL_CL_GUARDED(clReleaseMemObject, (samp->X_red_device));
     CALL_CL_GUARDED(clReleaseMemObject, (samp->log_pdf_red_device));
+    CALL_CL_GUARDED(clReleaseMemObject, (samp->X_red_save));
     CALL_CL_GUARDED(clReleaseMemObject, (samp->X_black_device));
     CALL_CL_GUARDED(clReleaseMemObject, (samp->log_pdf_black_device));
+    CALL_CL_GUARDED(clReleaseMemObject, (samp->X_black_save));
     CALL_CL_GUARDED(clReleaseMemObject, (samp->accepted_device));
     CALL_CL_GUARDED(clReleaseMemObject, (samp->data_device));
     CALL_CL_GUARDED(clReleaseMemObject, (samp->ranluxcltab));
     CALL_CL_GUARDED(clReleaseMemObject, (samp->data_st_device));
+    CALL_CL_GUARDED(clReleaseMemObject, (samp->indices_to_save_device));
 
     // kernels, context and queues
     CALL_CL_GUARDED(clReleaseKernel,       (samp->stretch_knl));
@@ -834,9 +900,11 @@ void free_sampler(sampler* samp){
     free(samp->accepted_host);
     free(samp->data_host);
     free(samp->data_st);
+    free(samp->indices_to_save_host);
 
     // data resources
     free(samp->acor_times);
 
     free(samp);
 }
+

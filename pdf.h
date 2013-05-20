@@ -46,6 +46,8 @@ typedef struct{
     // This includes the order of the members
 
     float beta;      // always include this
+    int num_to_save;
+    int save;
 
     // Add any other scalars here.
     // Small arrays of static length are also okay.

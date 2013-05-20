@@ -65,16 +65,24 @@ void example_simple(){
     cl_int chain_length       = 10000;                    // Allocate to store this much chain, sampler runs this many steps at once
     cl_int dimension          = 10;                       // Dimension of the state vector
     cl_int walkers_per_group  = 1024;                     // Total number of walkers is twice this
-    size_t work_group_size    = 32;                       // Work group size. Use 1 for CPU, larger number for GPU
+    size_t work_group_size    = 64;                       // Work group size. Use 1 for CPU, larger number for GPU
     cl_int pdf_number         = 0;                        // Use Gaussian debug problem
     cl_int data_length        = 0;                        // No data for this example
     cl_float *data_temp       = NULL;                     // Need to pass a NULL pointer for the data
     const char *plat_name     = CHOOSE_INTERACTIVELY;     // Choose the platform interactively at runtime
     const char *dev_name      = CHOOSE_INTERACTIVELY;     // Choose the device interactively at runtime
 
+    // set parameters about which components to save
+    cl_int num_to_save        = 3;
+    cl_int *indices_to_save   = (cl_int *) malloc(num_to_save * sizeof(cl_int));
+    indices_to_save[0]        = 0;
+    indices_to_save[1]        = 3;
+    indices_to_save[2]        = 5;
+
+
     // Initialize the sampler
-    sampler *samp = initialize_sampler(chain_length, dimension, walkers_per_group, work_group_size,
-                                        pdf_number, data_length, data_temp, plat_name, dev_name);
+    sampler *samp = initialize_sampler(chain_length, dimension, walkers_per_group, work_group_size, pdf_number,
+                                       data_length, data_temp, num_to_save, indices_to_save, plat_name, dev_name);
 
     // Run burn-in for 5000 steps
     int burn_length = 5000;
@@ -87,8 +95,8 @@ void example_simple(){
     // The array samp->samples_host now contains samples ready for use.
     //
     // Array is in component major order.
-    // To access the i-th component of sample j use
-    //     samp->samples_host[i + j*samp->N]
+    // To access the i-th saved sample of sample j use
+    //     samp->samples_host[i + j*(samp->num_to_save)]
     //
     // Dimension is (samp->N x samp->total_samples)
     // --------------------------------------------------------------------------
@@ -110,10 +118,18 @@ void example_with_data(){
     cl_int chain_length       = 10000;                   // Allocate to store this much chain, sampler runs this many steps at once
     cl_int dimension          = 10;                      // Dimension of the state vector
     cl_int walkers_per_group  = 2048;                    // Total number of walkers is twice this
-    size_t work_group_size    = 32;                      // Work group size. Use 1 for CPU, larger number for GPU
+    size_t work_group_size    = 64;                      // Work group size. Use 1 for CPU, larger number for GPU
     cl_int pdf_number         = 1;                       // Use pdf 1 for this problem
     const char *plat_name     = CHOOSE_INTERACTIVELY;    // Choose the platform interactively at runtime
     const char *dev_name      = CHOOSE_INTERACTIVELY;    // Choose the device interactively at runtime
+
+
+    // set parameters about which components to save
+    cl_int num_to_save        = 3;
+    cl_int *indices_to_save   = (cl_int *) malloc(num_to_save * sizeof(cl_int));
+    indices_to_save[0]        = 0;
+    indices_to_save[1]        = 3;
+    indices_to_save[2]        = 5;
 
 
     // Generate the mean and inverse covariance matrix
@@ -138,14 +154,14 @@ void example_with_data(){
 
 
     // Initialize the sampler
-    sampler *samp = initialize_sampler(chain_length, dimension, walkers_per_group, work_group_size,
-                                        pdf_number, data_length, data, plat_name, dev_name);
+    sampler *samp = initialize_sampler(chain_length, dimension, walkers_per_group, work_group_size, pdf_number,
+                                       data_length, data, num_to_save, indices_to_save, plat_name, dev_name);
 
-    // Initialize samp->data_st here, values will be copied
+    // Initialize structure members for samp->data_st here, values will be copied
 
 
     // Run burn-in
-    int burn_length = 5000;
+    int burn_length = 10000;
     run_burn_in(samp, burn_length);
 
 
@@ -156,8 +172,8 @@ void example_with_data(){
     // The array samp->samples_host now contains samples ready for use.
     //
     // Array is in component major order.
-    // To access the i-th component of sample j use
-    //     samp->samples_host[i + j*samp->N]
+    // To access the i-th saved sample of sample j use
+    //     samp->samples_host[i + j*(samp->num_to_save)]
     //
     // Dimension is (samp->N x samp->total_samples)
     // --------------------------------------------------------------------------

@@ -54,7 +54,9 @@ __kernel void stretch_move(
     __global float4 *ranluxcltab,              // state information for random number generator 
     __global unsigned long *accepted,          // number of samples accepted 
     __global const float *data,                // data or observations
-    __global const data_struct *data_st){      // structure with additional variables and parameters  
+    __global const data_struct *data_st,       // structure with additional variables and parameters
+    __constant int *indices_to_save,           // which components to save 
+    __global float *X_save ){                  // the saved components 
      
       
     // start up data structures for the random number generator 
@@ -134,5 +136,12 @@ __kernel void stretch_move(
     //Upload state again so that we don't get the same
     //numbers over again the next time we use ranluxcl.
     ranluxcl_upload_seed(&ranluxclstate, ranluxcltab);
-
+    
+    // update the components that need to be saved 
+    if(data_st->save){
+        int start_idx = k * data_st->num_to_save; 
+        for(int i=0; i < (data_st->num_to_save); i++) 
+            X_save[i + start_idx] = X_moving[ indices_to_save[i] + k*NN]; 
+    }
+ 
 }

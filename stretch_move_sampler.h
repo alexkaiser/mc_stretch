@@ -85,6 +85,8 @@ typedef struct{
         cl_float *data_host;                 // Observation data
         cl_int data_length;                  // Number of observations
         data_struct *data_st;                // Structure for additional static data
+        cl_int num_to_save;                  // Number of components to save
+        cl_int *indices_to_save_host;        // Indices of components to save
 
         // store acor times for making histograms
         double *acor_times;
@@ -112,12 +114,15 @@ typedef struct{
         // device memory
         cl_mem X_red_device;                       // One array of walkers
         cl_mem log_pdf_red_device;                 // Stored log pdf values
+        cl_mem X_red_save;                         // Saved components of X_red
         cl_mem X_black_device;                     // One array of walkers
         cl_mem log_pdf_black_device;               // Stored log pdf values
+        cl_mem X_black_save;                       // Saved components of X_black
         cl_mem accepted_device;                    // Number accepted on each work item
         cl_mem data_device;                        // Data array
         cl_mem ranluxcltab;                        // State array for randluxcl
         cl_mem data_st_device;                     // Struct for user data
+        cl_mem indices_to_save_device;             // Indices of components to save
 
 }sampler;
 
@@ -127,6 +132,7 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                             cl_int walkers_per_group, size_t work_group_size,
                             cl_int pdf_number,
                             cl_int data_length, cl_float *data,
+                            cl_int num_to_save, cl_int *indices_to_save,
                             const char *plat_name, const char *dev_name);
 
 void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int annealing_loops, cl_int steps_per_loop);
