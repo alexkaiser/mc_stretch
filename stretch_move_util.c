@@ -136,8 +136,8 @@ void histogram_data(int n_bins, float *samples, int n_samples, double tau, float
          float *sigma_f_hat      Estimate of standard deviation of f_hat estimates
      */
 
-    float x_min = 0.0f; 
-    float x_max = 0.0f; 
+    float x_min = samples[0];
+    float x_max = samples[0];
 
     for(int k=0; k<n_samples; k++){
         if (samples[k] < x_min)
@@ -147,9 +147,6 @@ void histogram_data(int n_bins, float *samples, int n_samples, double tau, float
             x_max = samples[k]; 
     }
     
-    // add a little leeway 
-    x_min -= 0.1f;
-    x_max += 0.1f;
     
     float dx = (x_max - x_min) / (float) n_bins; 
     
@@ -167,8 +164,13 @@ void histogram_data(int n_bins, float *samples, int n_samples, double tau, float
 
     for(int k=0; k<n_samples; k++){
         // compute the bin number 
+
         idx = (int) ( (samples[k] - x_min)/dx );
         
+        // include the last bdry too
+        if(samples[k] == x_max)
+            idx = n_bins - 1;
+
         if((idx < 0) || (idx>=n_bins)){
             lost++;                            // we're off to the side, this is bad
             printf("sample lost: %f, idx = %d\n", samples[k], idx); 
@@ -299,7 +301,7 @@ void compute_mean_stddev(float *X, double *mean, double *sigma, int total_sample
 /* acor module */ 
 
 /*  The code that does the acor analysis of the time series.  See the README file for details.  */
-#define TAUMAX  2                 /*   Compute tau directly only if tau < TAUMAX.
+#define TAUMAX  10                /*   Compute tau directly only if tau < TAUMAX.
                                        Otherwise compute tau using the pairwise sum series          */
 #define WINMULT 5                 /*   Compute autocovariances up to lag s = WINMULT*TAU            */
 #define MAXLAG  TAUMAX*WINMULT    /*   The autocovariance array is double C[MAXLAG+1] so that C[s]
