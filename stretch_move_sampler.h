@@ -90,6 +90,10 @@ typedef struct{
 
         // store acor times for making histograms
         double *acor_times;
+        char *acor_pass;
+        double *sigma;
+        double *means;
+        double *err_bar;
 
         // time stamps
         timestamp_type time1_total, time2_total;    // For total time

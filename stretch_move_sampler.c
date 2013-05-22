@@ -128,7 +128,16 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
 
 
     // for later output
-    samp->acor_times = (double *) malloc(samp->num_to_save * sizeof(double));
+    samp->acor_times  = (double *) malloc(samp->num_to_save * sizeof(double));
+    if(!samp->acor_times) { perror("Allocation failure"); abort(); }
+    samp->acor_pass   = (char   *) malloc(samp->num_to_save * sizeof(char));
+    if(!samp->acor_pass) { perror("Allocation failure"); abort(); }
+    samp->sigma       = (double *) malloc(samp->num_to_save * sizeof(double));
+    if(!samp->sigma)      { perror("Allocation failure"); abort(); }
+    samp->means       = (double *) malloc(samp->num_to_save * sizeof(double));
+    if(!samp->means)      { perror("Allocation failure"); abort(); }
+    samp->err_bar     = (double *) malloc(samp->num_to_save * sizeof(double));
+    if(!samp->err_bar)    { perror("Allocation failure"); abort(); }
 
     // write parameter file for plotting
     write_parameter_file_matlab(samp->M, samp->N, samp->K, "Stretch Move",
@@ -795,7 +804,11 @@ void run_acor(sampler *samp){
         // generate the statistics.
         acor_pass = acor(&mean, &sigma, &tau, ensemble_means, L);
 
-        samp->acor_times[i] = tau;
+        samp->means[i]       = mean;
+        samp->sigma[i]       = sigma;
+        samp->acor_times[i]  = tau;
+        samp->acor_pass[i]   = acor_pass;
+        samp->err_bar[i]     = sigma * tau;
 
         if(!acor_pass){
             printf("Acor error on component %d. Stats unreliable or just plain wrong.\n", samp->indices_to_save_host[i]);
@@ -904,6 +917,10 @@ void free_sampler(sampler* samp){
 
     // data resources
     free(samp->acor_times);
+    free(samp->acor_pass);
+    free(samp->means);
+    free(samp->sigma);
+    free(samp->err_bar);
 
     free(samp);
 }
