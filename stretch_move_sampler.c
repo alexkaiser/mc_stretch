@@ -807,8 +807,8 @@ void run_acor(sampler *samp){
         samp->means[i]       = mean;
         samp->sigma[i]       = sigma;
         samp->acor_times[i]  = tau;
-        samp->acor_pass[i]   = acor_pass;
-        samp->err_bar[i]     = sigma * tau;
+        samp->acor_pass[i]   = (char) acor_pass;
+        samp->err_bar[i]     = sigma * sqrt(tau) / sqrt((double) samp->K * samp->M);
 
         if(!acor_pass){
             printf("Acor error on component %d. Stats unreliable or just plain wrong.\n", samp->indices_to_save_host[i]);
