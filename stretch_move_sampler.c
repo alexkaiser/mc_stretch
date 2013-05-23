@@ -755,7 +755,7 @@ void print_run_summary(sampler *samp){
 
         compute_mean_stddev(X, &mean, &sigma, samp->total_samples);
 
-        printf("Statistics for X_%d:\t", i);
+        printf("Statistics for X_%d:\t", samp->indices_to_save_host[i]);
         printf("Mean = %f,\tsigma = %f\n", mean, sigma);
 
     }
@@ -814,7 +814,7 @@ void run_acor(sampler *samp){
             printf("Acor error on component %d. Stats unreliable or just plain wrong.\n", samp->indices_to_save_host[i]);
         }
 
-        printf("Acor ensemble statistics for X_%d:\t", i);
+        printf("Acor ensemble statistics for X_%d:\t", samp->indices_to_save_host[i]);
         printf("mean = %f,\tsigma = %f,\tautocorrelation time, tau = %f", mean, sigma, tau);
 
         if(acor_pass)
