@@ -65,7 +65,8 @@ void example_simple(){
     cl_int chain_length       = 10000;                    // Allocate to store this much chain, sampler runs this many steps at once
     cl_int dimension          = 10;                       // Dimension of the state vector
     cl_int walkers_per_group  = 1024;                     // Total number of walkers is twice this
-    size_t work_group_size    = 64;                       // Work group size. Use 1 for CPU, larger number for GPU
+    size_t work_group_size    = 32;                       // Work group size. Use 1 for CPU, larger number for GPU
+    double a                  = 2.0;                      // Coefficient for range of 'z' random variable
     cl_int pdf_number         = 0;                        // Use Gaussian debug problem
     cl_int data_length        = 0;                        // No data for this example
     cl_float *data_temp       = NULL;                     // Need to pass a NULL pointer for the data
@@ -81,7 +82,7 @@ void example_simple(){
 
 
     // Initialize the sampler
-    sampler *samp = initialize_sampler(chain_length, dimension, walkers_per_group, work_group_size, pdf_number,
+    sampler *samp = initialize_sampler(chain_length, dimension, walkers_per_group, work_group_size, a, pdf_number,
                                        data_length, data_temp, num_to_save, indices_to_save, plat_name, dev_name);
 
     // Run burn-in for 5000 steps
@@ -115,10 +116,11 @@ void example_with_data(){
 
 
     // User set parameters
-    cl_int chain_length       = 10000;                   // Allocate to store this much chain, sampler runs this many steps at once
+    cl_int chain_length       = 100000;                   // Allocate to store this much chain, sampler runs this many steps at once
     cl_int dimension          = 10;                      // Dimension of the state vector
     cl_int walkers_per_group  = 2048;                    // Total number of walkers is twice this
-    size_t work_group_size    = 64;                      // Work group size. Use 1 for CPU, larger number for GPU
+    size_t work_group_size    = 32;                      // Work group size. Use 1 for CPU, larger number for GPU
+    double a                  = 2.0;                     // Coefficient for range of 'z' random variable
     cl_int pdf_number         = 1;                       // Use pdf 1 for this problem
     const char *plat_name     = CHOOSE_INTERACTIVELY;    // Choose the platform interactively at runtime
     const char *dev_name      = CHOOSE_INTERACTIVELY;    // Choose the device interactively at runtime
@@ -154,7 +156,7 @@ void example_with_data(){
 
 
     // Initialize the sampler
-    sampler *samp = initialize_sampler(chain_length, dimension, walkers_per_group, work_group_size, pdf_number,
+    sampler *samp = initialize_sampler(chain_length, dimension, walkers_per_group, work_group_size, a, pdf_number,
                                        data_length, data, num_to_save, indices_to_save, plat_name, dev_name);
 
     // Initialize structure members for samp->data_st here, values will be copied

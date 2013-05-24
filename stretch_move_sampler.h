@@ -64,6 +64,7 @@ typedef struct{
         cl_int M;                           // Number of steps to run
         cl_int N;                           // Dimension of the problem and the walkers
         cl_int K_over_two;                  // Number of walkers in each group
+        double a;                           // Coefficient for range of 'z' random variable
 
         // derived parameters
         cl_int K;                           // Total walkers
@@ -134,7 +135,7 @@ typedef struct{
 // sampling routines
 sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                             cl_int walkers_per_group, size_t work_group_size,
-                            cl_int pdf_number,
+                            double a, cl_int pdf_number,
                             cl_int data_length, cl_float *data,
                             cl_int num_to_save, cl_int *indices_to_save,
                             const char *plat_name, const char *dev_name);

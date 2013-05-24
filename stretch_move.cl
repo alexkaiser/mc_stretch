@@ -102,7 +102,7 @@ __kernel void stretch_move(
         j = (int) (xi.s0 * K_OVER_TWO); 
 
         // draw a sample from the g(Z) distribution
-        z = 0.5f * xi.s1*xi.s1 + xi.s1 + 0.5f;
+        z = A_COEFF_2 * xi.s1*xi.s1 + A_COEFF_1 * xi.s1 + A_COEFF_0;
         
         // compute the proposal 
         for(int i=0; i<NN; i++)

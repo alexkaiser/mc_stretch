@@ -32,7 +32,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                             cl_int walkers_per_group, size_t work_group_size,
-                            cl_int pdf_number,
+                            double a, cl_int pdf_number,
                             cl_int data_length, cl_float *data,
                             cl_int num_to_save, cl_int *indices_to_save,
                             const char *plat_name, const char *dev_name){
@@ -47,7 +47,6 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
      Compile stretch move OpenCL kernel.
 
      Input:
-          cl_int pdf_number                  Which PDF to sample. Passed to pdf.h as a compile time definition.
           cl_int chain_length                Allocate space for this many samples in the sampler struct.
                                                  Sampler fills this array when run_sampler is called.
           cl_int dimension                   Dimension of state vector of Markov chain.
@@ -56,6 +55,11 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                                                  For CPU this must be set to one.
                                                  For GPU this should be set larger, powers of two are optimal, try 64, 128 or 256.
                                                  This number must divide walkers_per_group.
+          double a                           Coefficient for range of 'z' random variable.
+                                                 Must be greater than one.
+                                                 Standard value is 2.
+                                                 Decrease a to increase low acceptance rate, especially in high dimensions.
+          cl_int pdf_number                  Which PDF to sample. Passed to pdf.h as a compile time definition.
           cl_int data_length                 Length of observation data. If no data set this to zero.
           cl_float *data                     Observation data.
           cl_int num_to_save                 Number of components to save in the chain
@@ -105,6 +109,14 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     (samp->data_st)->save         = 1;
     (samp->data_st)->num_to_save  = num_to_save;
 
+    // coefficient on Z random variable
+    samp->a = a;
+    double a_coeffs[3];
+    a_coeffs[0] = 1.0 / a;
+    a_coeffs[1] = 2.0 * (1.0 - 1.0/a);
+    a_coeffs[2] = a - 2.0 + 1.0/a;
+
+
     // error check on dimensions
     if(samp->K <= samp->N){
         fprintf(stderr, "Error: Must have more walkers than the dimension.\nExiting\n");
@@ -125,6 +137,10 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
         }
     }
 
+    if(a <= 1.0){
+        fprintf(stderr, "Error: Value of a must be greater than one.\nDefaulting to 2.\n");
+        samp->a = 2.0;
+    }
 
 
     // for later output
@@ -244,9 +260,9 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
 
     // stretch move kernel
     char *knl_text = read_file("stretch_move.cl");
-    char options[200];
-    sprintf(options, "-DNN=%d -DK_OVER_TWO=%d -DDATA_LEN=%d -DPDF_NUMBER=%d -I . ",
-            samp->N, samp->K_over_two, samp->data_length, pdf_number);    // define N at kernel compile time
+    char options[300];
+    sprintf(options, "-D NN=%d -D K_OVER_TWO=%d -D DATA_LEN=%d -D PDF_NUMBER=%d -D A_COEFF_0=%.10ff -D A_COEFF_1=%.10ff -D A_COEFF_2=%.10ff  -I . ",
+            samp->N, samp->K_over_two, samp->data_length, pdf_number, a_coeffs[0], a_coeffs[1], a_coeffs[2]);
 
     if(OUTPUT_LEVEL > 0) printf("Options string for stretch move kernel:%s\n", options);
 
