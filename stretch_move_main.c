@@ -116,12 +116,12 @@ void example_with_data(){
 
 
     // User set parameters
-    cl_int chain_length       = 100000;                   // Allocate to store this much chain, sampler runs this many steps at once
+    cl_int chain_length       = 10000;                   // Allocate to store this much chain, sampler runs this many steps at once
     cl_int dimension          = 10;                      // Dimension of the state vector
     cl_int walkers_per_group  = 2048;                    // Total number of walkers is twice this
     size_t work_group_size    = 32;                      // Work group size. Use 1 for CPU, larger number for GPU
-    double a                  = 2.0;                     // Coefficient for range of 'z' random variable
-    cl_int pdf_number         = 1;                       // Use pdf 1 for this problem
+    double a                  = 1.5;                     // Coefficient for range of 'z' random variable
+    cl_int pdf_number         = 0;                       // Use pdf 1 for this problem
     const char *plat_name     = CHOOSE_INTERACTIVELY;    // Choose the platform interactively at runtime
     const char *dev_name      = CHOOSE_INTERACTIVELY;    // Choose the device interactively at runtime
 
