@@ -136,19 +136,19 @@ void histogram_data(int n_bins, float *samples, int n_samples, double tau, float
          float *sigma_f_hat      Estimate of standard deviation of f_hat estimates
      */
 
-    float x_min = samples[0];
-    float x_max = samples[0];
+    double x_min = (double) samples[0];
+    double x_max = (double) samples[0];
 
     for(int k=0; k<n_samples; k++){
         if (samples[k] < x_min)
-            x_min = samples[k]; 
+            x_min = (double) samples[k];
             
         if (samples[k] > x_max)
-            x_max = samples[k]; 
+            x_max = (double) samples[k];
     }
     
     
-    float dx = (x_max - x_min) / (float) n_bins; 
+    float dx = (x_max - x_min) / (double) n_bins;
     
     unsigned long *bin_counts = (unsigned long *) malloc(n_bins * sizeof(unsigned long)); 
     if(!bin_counts) { perror("Alloc host: histogram bins. "); abort(); }
@@ -159,7 +159,7 @@ void histogram_data(int n_bins, float *samples, int n_samples, double tau, float
 
     for(int k=0; k<n_bins; k++){
         bin_counts[k] = 0; // start the counters at zero 
-        centers[k] = 0.5*dx + k*dx + x_min;    // initialize the bin centers  
+        centers[k] = (float) 0.5*dx + k*dx + x_min;    // initialize the bin centers
     }
 
     for(int k=0; k<n_samples; k++){
