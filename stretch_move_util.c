@@ -301,7 +301,7 @@ void compute_mean_stddev(float *X, double *mean, double *sigma, int total_sample
 /* acor module */ 
 
 /*  The code that does the acor analysis of the time series.  See the README file for details.  */
-#define TAUMAX  10                /*   Compute tau directly only if tau < TAUMAX.
+#define TAUMAX  2                /*   Compute tau directly only if tau < TAUMAX.
                                        Otherwise compute tau using the pairwise sum series          */
 #define WINMULT 5                 /*   Compute autocovariances up to lag s = WINMULT*TAU            */
 #define MAXLAG  TAUMAX*WINMULT    /*   The autocovariance array is double C[MAXLAG+1] so that C[s]
