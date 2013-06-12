@@ -274,8 +274,8 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     // stretch move kernel
     char *knl_text = read_file("stretch_move.cl");
     char options[300];
-    sprintf(options, "-D NN=%d -D K_OVER_TWO=%d -D DATA_LEN=%d -D PDF_NUMBER=%d -D A_COEFF_0=%.10ff -D A_COEFF_1=%.10ff -D A_COEFF_2=%.10ff  -I . ",
-            samp->N, samp->K_over_two, samp->data_length, pdf_number, a_coeffs[0], a_coeffs[1], a_coeffs[2]);
+    sprintf(options, "-D NN=%d -D K_OVER_TWO=%d -D WORK_GROUP_SIZE=%d -D DATA_LEN=%d -D PDF_NUMBER=%d -D A_COEFF_0=%.10ff -D A_COEFF_1=%.10ff -D A_COEFF_2=%.10ff  -I . ",
+            samp->N, samp->K_over_two, (int) work_group_size, samp->data_length, pdf_number, a_coeffs[0], a_coeffs[1], a_coeffs[2]);
 
     if(OUTPUT_LEVEL > 0) printf("Options string for stretch move kernel:%s\n", options);
 

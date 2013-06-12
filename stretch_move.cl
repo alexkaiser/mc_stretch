@@ -69,11 +69,13 @@ __kernel void stretch_move(
 
     // get indexing information 
     int lid             = get_local_id(0);
-    int work_group_size = get_local_size(0);
     int k               = get_global_id(0);
      
-    // allocate Y 
-    float Y[NN];             
+    // allocate local
+    __local float Y[NN * WORK_GROUP_SIZE];       
+    
+    // the first index owned by this work item in the local arrays
+    int start_idx = NN * lid;    
               
     // temps 
     float z, q, log_py, log_pxk;
@@ -85,7 +87,7 @@ __kernel void stretch_move(
     #ifdef USE_LOCAL_DATA 
         // allocate more local for the observation arrays 
         __local float data_local[DATA_LEN]; 
-        for(int i=lid; i<DATA_LEN; i += work_group_size)
+        for(int i=lid; i<DATA_LEN; i += WORK_GROUP_SIZE)
             data_local[i] = data[i];  
     
         // make sure all the copies have gone through 
@@ -106,13 +108,13 @@ __kernel void stretch_move(
         
         // compute the proposal 
         for(int i=0; i<NN; i++)
-            Y[i] = X_fixed[i + j*NN] + z * (X_moving[i + k*NN] - X_fixed[i + j*NN]); 
+            Y[i + start_idx] = X_fixed[i + j*NN] + z * (X_moving[i + k*NN] - X_fixed[i + j*NN]); 
 
         // evaluate the likelihood function 
         #ifdef USE_LOCAL_DATA
-            log_py  = log_pdf(Y, data_st, data_local);
+            log_py  = log_pdf(Y + start_idx, data_st, data_local);
         #else
-            log_py  = log_pdf(Y, data_st, data);
+            log_py  = log_pdf(Y + start_idx, data_st, data);
         #endif 
         
         // always reject an inf sample 
@@ -128,7 +130,7 @@ __kernel void stretch_move(
         if(xi.s2 <= q){
             accepted[k]++ ;  
             for(int i=0; i<NN; i++)
-                X_moving[i + k*NN] = Y[i];
+                X_moving[i + k*NN] = Y[i + start_idx];
             log_prob_moving[k] = log_py; 
         }
     }

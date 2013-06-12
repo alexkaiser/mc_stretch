@@ -57,7 +57,7 @@ typedef struct{
 
 
 
-float log_pdf(float *x, __global const data_struct *data_st, DATA_ARRAY_TYPE *data){
+float log_pdf(__local float *x, __global const data_struct *data_st, DATA_ARRAY_TYPE *data){
     /*
     Evaluate denormalized log of the PDF.
 
@@ -111,7 +111,7 @@ float log_pdf(float *x, __global const data_struct *data_st, DATA_ARRAY_TYPE *da
 
         // Compute the remaining dot product
         // sum = (x - mu)^(t) * inv_cov * (x - mu)
-        float sum  = 0.0;
+        float sum  = 0.0f;
         for(int i=0; i<NN; i++)
             sum += temp[i] * (x[i] - mu[i]);
 
