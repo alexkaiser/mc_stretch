@@ -25,6 +25,7 @@
 
 #include "cl-helper.h"
 #include <string.h>
+#include <stdbool.h>
 
 
 
@@ -345,8 +346,11 @@ void create_context_on(const char *plat_name, const char*dev_name, cl_uint idx,
             if (enable_profiling)
               qprops |= CL_QUEUE_PROFILING_ENABLE;
 
-            *queue = clCreateCommandQueue(*ctx, dev, qprops, &status);
-            CHECK_CL_ERROR(status, "clCreateCommandQueue");
+            if (queue)
+            {
+              *queue = clCreateCommandQueue(*ctx, dev, qprops, &status);
+              CHECK_CL_ERROR(status, "clCreateCommandQueue");
+            }
 
             return;
           }
@@ -365,170 +369,6 @@ void create_context_on(const char *plat_name, const char*dev_name, cl_uint idx,
   abort();
 }
 
-
-// Exact same function but creates two queues
-// Added by Alex Kaiser
-void create_context_and_two_queues_on(const char *plat_name, const char*dev_name, cl_uint idx,
-    cl_context *ctx, cl_command_queue *queue, cl_command_queue *queue_mem, int enable_profiling)
-{
-  char dev_sel_buf[MAX_NAME_LEN];
-  char platform_sel_buf[MAX_NAME_LEN];
-
-  // get number of platforms
-  cl_uint plat_count;
-  CALL_CL_GUARDED(clGetPlatformIDs, (0, NULL, &plat_count));
-
-  // allocate memory, get list of platform handles
-  cl_platform_id *platforms =
-    (cl_platform_id *) malloc(plat_count*sizeof(cl_platform_id));
-  CHECK_SYS_ERROR(!platforms, "allocating platform array");
-  CALL_CL_GUARDED(clGetPlatformIDs, (plat_count, platforms, NULL));
-
-  // print menu, if requested
-#ifndef CL_HELPER_FORCE_INTERACTIVE
-  if (plat_name == CHOOSE_INTERACTIVELY) // yes, we want exactly that pointer
-#endif
-  {
-    puts("Choose platform:");
-    for (cl_uint i = 0; i < plat_count; ++i)
-    {
-      char buf[MAX_NAME_LEN];
-      CALL_CL_GUARDED(clGetPlatformInfo, (platforms[i], CL_PLATFORM_VENDOR,
-            sizeof(buf), buf, NULL));
-      printf("[%d] %s\n", i, buf);
-    }
-
-    printf("Enter choice: ");
-    fflush(stdout);
-
-    char *sel = read_a_line();
-    if (!sel)
-    {
-      fprintf(stderr, "error reading line from stdin");
-      abort();
-    }
-
-    int sel_int = MIN(MAX(0, atoi(sel)), (int) plat_count-1);
-    free(sel);
-
-    CALL_CL_GUARDED(clGetPlatformInfo, (platforms[sel_int], CL_PLATFORM_VENDOR,
-          sizeof(platform_sel_buf), platform_sel_buf, NULL));
-    plat_name = platform_sel_buf;
-  }
-
-  // iterate over platforms
-  for (cl_uint i = 0; i < plat_count; ++i)
-  {
-    // get platform name
-    char buf[MAX_NAME_LEN];
-    CALL_CL_GUARDED(clGetPlatformInfo, (platforms[i], CL_PLATFORM_VENDOR,
-          sizeof(buf), buf, NULL));
-
-    // does it match?
-    if (!plat_name || strstr(buf, plat_name))
-    {
-      // get number of devices in platform
-      cl_uint dev_count;
-      CALL_CL_GUARDED(clGetDeviceIDs, (platforms[i], CL_DEVICE_TYPE_ALL,
-            0, NULL, &dev_count));
-
-      // allocate memory, get list of device handles in platform
-      cl_device_id *devices =
-        (cl_device_id *) malloc(dev_count*sizeof(cl_device_id));
-      CHECK_SYS_ERROR(!devices, "allocating device array");
-
-      CALL_CL_GUARDED(clGetDeviceIDs, (platforms[i], CL_DEVICE_TYPE_ALL,
-            dev_count, devices, NULL));
-
-      // {{{ print device menu, if requested
-#ifndef CL_HELPER_FORCE_INTERACTIVE
-      if (dev_name == CHOOSE_INTERACTIVELY) // yes, we want exactly that pointer
-#endif
-      {
-        puts("Choose device:");
-        for (cl_uint j = 0; j < dev_count; ++j)
-        {
-          char buf[MAX_NAME_LEN];
-          CALL_CL_GUARDED(clGetDeviceInfo, (devices[j], CL_DEVICE_NAME,
-                sizeof(buf), buf, NULL));
-          printf("[%d] %s\n", j, buf);
-        }
-
-        printf("Enter choice: ");
-        fflush(stdout);
-
-        char *sel = read_a_line();
-        if (!sel)
-        {
-          fprintf(stderr, "error reading line from stdin");
-          abort();
-        }
-
-        int int_sel = MIN(MAX(0, atoi(sel)), (int) dev_count-1);
-        free(sel);
-
-        CALL_CL_GUARDED(clGetDeviceInfo, (devices[int_sel], CL_DEVICE_NAME,
-              sizeof(dev_sel_buf), dev_sel_buf, NULL));
-        dev_name = dev_sel_buf;
-      }
-
-      // }}}
-
-      // iterate over devices
-      for (cl_uint j = 0; j < dev_count; ++j)
-      {
-        // get device name
-        char buf[MAX_NAME_LEN];
-        CALL_CL_GUARDED(clGetDeviceInfo, (devices[j], CL_DEVICE_NAME,
-              sizeof(buf), buf, NULL));
-
-        // does it match?
-        if (!dev_name || strstr(buf, dev_name))
-        {
-          if (idx == 0)
-          {
-            cl_platform_id plat = platforms[i];
-            cl_device_id dev = devices[j];
-
-            free(devices);
-            free(platforms);
-
-            // create a context
-            cl_context_properties cps[3] = {
-              CL_CONTEXT_PLATFORM, (cl_context_properties) plat, 0 };
-
-            cl_int status;
-            *ctx = clCreateContext(
-                cps, 1, &dev, NULL, NULL, &status);
-            CHECK_CL_ERROR(status, "clCreateContext");
-
-            // create a command queue
-            cl_command_queue_properties qprops = 0;
-            if (enable_profiling)
-              qprops |= CL_QUEUE_PROFILING_ENABLE;
-
-            *queue = clCreateCommandQueue(*ctx, dev, qprops, &status);
-            CHECK_CL_ERROR(status, "clCreateCommandQueue");
-
-            *queue_mem = clCreateCommandQueue(*ctx, dev, qprops, &status);
-            CHECK_CL_ERROR(status, "clCreateCommandQueue");
-
-            return;
-          }
-          else
-            --idx;
-        }
-      }
-
-      free(devices);
-    }
-  }
-
-  free(platforms);
-
-  fputs("create_context_on: specified device not found.\n", stderr);
-  abort();
-}
 
 
 
@@ -560,11 +400,19 @@ char *read_file(const char *filename)
 
 
 
+static int printed_compiler_output_message = 0;
+
 cl_kernel kernel_from_string(cl_context ctx,
     char const *knl, char const *knl_name, char const *options)
 {
   // create an OpenCL program (may have multiple kernels)
   size_t sizes[] = { strlen(knl) };
+
+  if (options && strlen(options) == 0)
+  {
+    // reportedly, some implementations dislike empty strings.
+    options = NULL;
+  }
 
   cl_int status;
   cl_program program = clCreateProgramWithSource(ctx, 1, &knl, sizes, &status);
@@ -573,9 +421,8 @@ cl_kernel kernel_from_string(cl_context ctx,
   // build it
   status = clBuildProgram(program, 0, NULL, options, NULL, NULL);
 
-  if (status != CL_SUCCESS)
   {
-    // build failed, get build log and print it
+    // get build log and print it
 
     cl_device_id dev;
     CALL_CL_GUARDED(clGetProgramInfo, (program, CL_PROGRAM_DEVICES,
@@ -585,21 +432,42 @@ cl_kernel kernel_from_string(cl_context ctx,
     CALL_CL_GUARDED(clGetProgramBuildInfo, (program, dev, CL_PROGRAM_BUILD_LOG,
           0, NULL, &log_size));
 
-    char *log = (char *) malloc(log_size);
-    CHECK_SYS_ERROR(!log, "kernel_from_string: allocate log");
+    bool do_print = status != CL_SUCCESS;
+    if (!do_print && log_size)
+    {
+      if (getenv("CL_HELPER_PRINT_COMPILER_OUTPUT"))
+        do_print = true;
+      else
+      {
+        if (!printed_compiler_output_message && !getenv("CL_HELPER_NO_COMPILER_OUTPUT_NAG"))
+        {
+          fprintf(stderr, "*** Kernel compilation resulted in non-empty log message.\n"
+              "*** Set environment variable CL_HELPER_PRINT_COMPILER_OUTPUT=1 to see more.\n"
+              "*** NOTE: this may include compiler warnings and other important messages\n"
+              "***   about your code.\n"
+              "*** Set CL_HELPER_NO_COMPILER_OUTPUT_NAG=1 to disable this message.\n");
+          printed_compiler_output_message = true;
+        }
+      }
+    }
 
-    char devname[MAX_NAME_LEN];
-    CALL_CL_GUARDED(clGetDeviceInfo, (dev, CL_DEVICE_NAME,
-          sizeof(devname), devname, NULL));
+    if (do_print)
+    {
+      char *log = (char *) malloc(log_size);
+      CHECK_SYS_ERROR(!log, "kernel_from_string: allocate log");
 
-    CALL_CL_GUARDED(clGetProgramBuildInfo, (program, dev, CL_PROGRAM_BUILD_LOG,
-          log_size, log, NULL));
-    fprintf(stderr, "*** build of '%s' on '%s' failed:\n%s\n*** (end of error)\n",
-        knl_name, devname, log);
-    abort();
+      char devname[MAX_NAME_LEN];
+      CALL_CL_GUARDED(clGetDeviceInfo, (dev, CL_DEVICE_NAME,
+            sizeof(devname), devname, NULL));
+
+      CALL_CL_GUARDED(clGetProgramBuildInfo, (program, dev, CL_PROGRAM_BUILD_LOG,
+            log_size, log, NULL));
+      fprintf(stderr, "*** build of '%s' on '%s' said:\n%s\n*** (end of message)\n",
+          knl_name, devname, log);
+    }
   }
-  else
-    CHECK_CL_ERROR(status, "clBuildProgram");
+
+  CHECK_CL_ERROR(status, "clBuildProgram");
 
   // fish the kernel out of the program
   cl_kernel kernel = clCreateKernel(program, knl_name, &status);

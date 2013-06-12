@@ -164,7 +164,20 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     // --------------------------------------------------------------------------
     if(OUTPUT_LEVEL > 0) printf("Begin opencl contexts.\n");
 
-    create_context_and_two_queues_on(plat_name, dev_name, 0, &(samp->ctx), &(samp->queue), &(samp->queue_mem), 0);
+    create_context_on(plat_name, dev_name, 0, &(samp->ctx), NULL, 0);
+
+    {
+      cl_int status;
+      cl_device_id my_dev;
+
+      CALL_CL_GUARDED(clGetContextInfo, (samp->ctx, CL_CONTEXT_DEVICES,
+            sizeof(my_dev), &my_dev, NULL));
+
+      samp->queue = clCreateCommandQueue(samp->ctx, my_dev, 0, &status);
+      CHECK_CL_ERROR(status, "clCreateCommandQueue");
+      samp->queue_mem = clCreateCommandQueue(samp->ctx, my_dev, 0, &status);
+      CHECK_CL_ERROR(status, "clCreateCommandQueue");
+    }
 
     // print information on selected device
     if(OUTPUT_LEVEL > 1)  print_device_info_from_queue(samp->queue);
