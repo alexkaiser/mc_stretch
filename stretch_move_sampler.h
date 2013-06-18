@@ -36,22 +36,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "constants.h"
 #include "data_struct.h"
 
-// If true this will make initial components nonnegative
-// This is generically fine
-#define NONNEGATIVE_BOX 1
-
-
-// Chance the kernel compile flags to work with AMD compilers
-// Note that the sampler is not currently tested with this hardware
-// (but compiling will fail with this set to zero)
-#define AMD 0
-
-
-// Set the amount of output
-// OUTPUT_LEVEL 0: Only fatal error messages
-// OUTPUT_LEVEL 1: Print progress updates
-// OUTPUT_LEVEL 2: Print information about selected device
-#define OUTPUT_LEVEL 2
 
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
