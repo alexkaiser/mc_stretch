@@ -28,6 +28,18 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 
 #include "constants.h"
 
+
+// define this flag to put proposal array into local memory
+#define USE_LOCAL_PROPOSAL
+
+// if this is not defined
+#ifdef USE_LOCAL_PROPOSAL
+    #define PROPOSAL_TYPE  __local const float
+#else
+    #define PROPOSAL_TYPE          const float
+#endif
+
+
 // define this flag to put data array into local memory
 #define USE_LOCAL_DATA
 
@@ -57,7 +69,7 @@ typedef struct{
 
 
 
-float log_pdf(__local float *x, __global const data_struct *data_st, DATA_ARRAY_TYPE *data){
+float log_pdf(PROPOSAL_TYPE *x, __global const data_struct *data_st, DATA_ARRAY_TYPE *data){
     /*
     Evaluate denormalized log of the PDF.
 

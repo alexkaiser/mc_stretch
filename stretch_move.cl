@@ -71,12 +71,20 @@ __kernel void stretch_move(
     int lid             = get_local_id(0);
     int k               = get_global_id(0);
      
-    // allocate local
-    __local float Y[NN * WORK_GROUP_SIZE];       
     
-    // the first index owned by this work item in the local arrays
-    int start_idx = NN * lid;    
-              
+    // allocate for proposal 
+    #ifdef USE_LOCAL_PROPOSAL
+        // allocate local if size permits 
+        __local float Y[NN * WORK_GROUP_SIZE];       
+    
+        // the first index owned by this work item in the local arrays
+        const int start_idx = NN * lid;    
+    #else  
+        // allocate into private, likely spills into global 
+        float Y[NN]; 
+        const int start_idx = 0;
+    #endif 
+    
     // temps 
     float z, q, log_py, log_pxk;
     int j; 
