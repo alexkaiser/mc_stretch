@@ -116,7 +116,7 @@ void write_parameter_file_matlab(int M, int N, int K, char *sampler_name, int *i
 }
 
 
-void histogram_data(int n_bins, float *samples, int n_samples, double tau, float *centers, float *f_hat, float *sigma_f_hat){
+void histogram_data(int n_bins, float *samples, int n_samples, double tau, float *centers, float *f_hat){
     /*
      Compute a histogram from one dimensional data.
      Centers are computed dynamically to include all the data.
@@ -128,12 +128,10 @@ void histogram_data(int n_bins, float *samples, int n_samples, double tau, float
          double tau              Autocorrelation time, for making error bars
          float *centers          Preallocated to length n_bins
          float *f_hat            Preallocated to length n_bins
-         float *sigma_f_hat      Preallocated to length n_bins
 
      Output:
          float *centers          Bin centers
          float *f_hat            Estimate f_hat of pdf computed from data
-         float *sigma_f_hat      Estimate of standard deviation of f_hat estimates
      */
 
     double x_min = (double) samples[0];
@@ -188,7 +186,6 @@ void histogram_data(int n_bins, float *samples, int n_samples, double tau, float
     for(int k=0; k<n_bins; k++){
         pk = ((float) bin_counts[k]) / (float) (n_samples);
         f_hat[k] = pk / (float) (dx);
-        sigma_f_hat[k] = sqrt( pk * (1.0f - pk) / (effective_samples * dx * dx)) ;
     }
         
     if(lost > 1)
@@ -198,7 +195,7 @@ void histogram_data(int n_bins, float *samples, int n_samples, double tau, float
 }
 
 
-void histogram_to_matlab(int n_bins, float *centers, float *f_hat, float *sigma_f_hat, int var_number){
+void histogram_to_matlab(int n_bins, float *centers, float *f_hat, int var_number){
     /*
      Output a matlab file for histograms.
      Data must be precomputed.
@@ -207,7 +204,6 @@ void histogram_to_matlab(int n_bins, float *centers, float *f_hat, float *sigma_
          int n_bins              Number of bins.
          float *centers          Bin center.
          float *f_hat            Bin estimate.
-         float *sigma_f_hat      Estimate of std deviation of estimate.
          int var_number          Component number for file title.
 
      Output:
@@ -231,12 +227,6 @@ void histogram_to_matlab(int n_bins, float *centers, float *f_hat, float *sigma_
     }
     fprintf(f, "];\n"); 
     
-    fprintf(f, "sigma_f_hat = [");
-    for(int i=0; i<n_bins; i++){
-        fprintf(f, "%f ", sigma_f_hat[i]);
-    }
-    fprintf(f, "];\n");
-
     fclose(f); 
 }
 

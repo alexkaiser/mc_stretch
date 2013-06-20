@@ -882,8 +882,6 @@ void output_histograms(sampler *samp, char matlab_hist, char gnuplot_hist){
     if(!centers){ perror("Allocation failure Histogram"); abort(); }
     float *f_hat = (float *) malloc(n_bins * sizeof(float));
     if(!f_hat){ perror("Allocation failure Histogram"); abort(); }
-    float *sigma_f_hat = (float *) malloc(n_bins * sizeof(float));
-    if(!sigma_f_hat){ perror("Allocation failure Histogram"); abort(); }
     float *X = (float *) malloc(samp->total_samples * sizeof(float));
     if(!X){ perror("Allocation failure Histogram"); abort(); }
 
@@ -893,19 +891,17 @@ void output_histograms(sampler *samp, char matlab_hist, char gnuplot_hist){
             X[j] = samp->samples_host[i + j*(samp->num_to_save)];
 
         tau = samp->acor_times[i];
-        histogram_data(n_bins, X, samp->total_samples, tau, centers, f_hat, sigma_f_hat);
+        histogram_data(n_bins, X, samp->total_samples, tau, centers, f_hat);
 
         if(matlab_hist)
-            histogram_to_matlab(n_bins, centers, f_hat, sigma_f_hat, (samp->indices_to_save_host[i])+1); // add one for matlab index
+            histogram_to_matlab(n_bins, centers, f_hat, (samp->indices_to_save_host[i])+1); // add one for matlab index
         if(gnuplot_hist)
             histogram_to_gnuplot(n_bins, centers, f_hat, samp->indices_to_save_host[i]);
     }
 
     free(centers);
     free(f_hat);
-    free(sigma_f_hat);
     free(X);
-
 
 }
 
