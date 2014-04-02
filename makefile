@@ -6,7 +6,7 @@ all: $(EXECUTABLES)
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Darwin)
-	CFLAGS := -Wall -03 -std=c99 
+	CFLAGS := -Wall -O3 -std=c99 
 	LDLIBS := -framework OpenCL
 endif
 
