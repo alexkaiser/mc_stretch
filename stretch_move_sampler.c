@@ -462,7 +462,7 @@ void update_walker_positions_device(sampler *samp){
 
     CALL_CL_GUARDED(clFinish, (samp->queue));
 
-    if(OUTPUT_LEVEL > 0) printf("Walker .\n");
+    if(OUTPUT_LEVEL > 0) printf("Walker update to device completed.\n");
 
 }
 
