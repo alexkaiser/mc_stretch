@@ -422,6 +422,51 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
 }
 
 
+void update_walker_positions_device(sampler *samp){
+    /*
+     Update walker positions and corresponding PDF values on device.
+
+     Input:
+          sampler *samp                  Pointer to sampler structure which has been initialized.
+
+     Output:
+                                         Walker positions updated on device.
+                                         Log PDF values updated on device.
+     */
+
+
+
+    // --------------------------------------------------------------------------
+    // transfer to device
+    // --------------------------------------------------------------------------
+
+    CALL_CL_GUARDED(clEnqueueWriteBuffer, (
+        samp->queue, samp->X_red_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
+        samp->N * samp->K_over_two * sizeof(cl_float), samp->X_red_host,
+        0, NULL, NULL));
+
+    CALL_CL_GUARDED(clEnqueueWriteBuffer, (
+        samp->queue, samp->log_pdf_red_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
+        samp->K_over_two * sizeof(cl_float), samp->log_pdf_red_host,
+        0, NULL, NULL));
+
+    CALL_CL_GUARDED(clEnqueueWriteBuffer, (
+        samp->queue, samp->X_black_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
+        samp->N * samp->K_over_two * sizeof(cl_float), samp->X_black_host,
+        0, NULL, NULL));
+
+    CALL_CL_GUARDED(clEnqueueWriteBuffer, (
+        samp->queue, samp->log_pdf_black_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
+        samp->K_over_two * sizeof(cl_float), samp->log_pdf_black_host,
+        0, NULL, NULL));
+
+    CALL_CL_GUARDED(clFinish, (samp->queue));
+
+    if(OUTPUT_LEVEL > 0) printf("Walker .\n");
+
+}
+
+
 void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int annealing_loops, cl_int steps_per_loop){
     /*
      Run the simulated annealing to allow the walkers to explore the space

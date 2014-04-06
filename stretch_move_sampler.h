@@ -124,6 +124,7 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                             cl_int num_to_save, cl_int *indices_to_save,
                             const char *plat_name, const char *dev_name);
 
+void update_walker_positions_device(sampler *samp);
 void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int annealing_loops, cl_int steps_per_loop);
 void run_burn_in(sampler *samp, int burn_length);
 void run_sampler(sampler *samp);
