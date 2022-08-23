@@ -30,11 +30,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 #include "stretch_move_util.h"
 
 
-sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
-                            cl_int walkers_per_group, size_t work_group_size,
-                            double a, cl_int pdf_number,
-                            cl_int data_length, cl_float *data,
-                            cl_int num_to_save, cl_int *indices_to_save,
+sampler* initialize_sampler(cl_long  chain_length, cl_long  dimension,
+                            cl_long  walkers_per_group, size_t work_group_size,
+                            double a, cl_long  pdf_number,
+                            cl_long  data_length, cl_float *data,
+                            cl_long  num_to_save, cl_int  *indices_to_save,
                             const char *plat_name, const char *dev_name){
 
     /*
@@ -47,10 +47,10 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
      Compile stretch move OpenCL kernel.
 
      Input:
-          cl_int chain_length                Allocate space for this many samples in the sampler struct.
+          cl_long  chain_length                Allocate space for this many samples in the sampler struct.
                                                  Sampler fills this array when run_sampler is called.
-          cl_int dimension                   Dimension of state vector of Markov chain.
-          cl_int walkers_per_group           Number of walkers in each of two groups. Total walkers is twice this.
+          cl_long  dimension                   Dimension of state vector of Markov chain.
+          cl_long  walkers_per_group           Number of walkers in each of two groups. Total walkers is twice this.
           size_t work_group_size             Work group size.
                                                  For CPU this must be set to one.
                                                  For GPU this should be set larger, powers of two are optimal, try 64, 128 or 256.
@@ -59,11 +59,11 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
                                                  Must be greater than one.
                                                  Standard value is 2.
                                                  Decrease a to increase low acceptance rate, especially in high dimensions.
-          cl_int pdf_number                  Which PDF to sample. Passed to pdf.h as a compile time definition.
-          cl_int data_length                 Length of observation data. If no data set this to zero.
+          cl_long  pdf_number                  Which PDF to sample. Passed to pdf.h as a compile time definition.
+          cl_long  data_length                 Length of observation data. If no data set this to zero.
           cl_float *data                     Observation data.
-          cl_int num_to_save                 Number of components to save in the chain
-          cl_int *indices_to_save            Indices of components to save in the chain
+          cl_long  num_to_save                 Number of components to save in the chain
+          cl_long  *indices_to_save            Indices of components to save in the chain
           const char *plat_name              String for platform name. Set to CHOOSE_INTERACTIVELY (no quotes) to do so.
           const char *dev_name               String for device name. Set to CHOOSE_INTERACTIVELY (no quotes) to do so.
 
@@ -130,7 +130,7 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     }
 
     // error check on dimensions to save
-    for(int i=0; i<num_to_save; i++){
+    for(cl_long i=0; i<num_to_save; i++){
         if(samp->indices_to_save_host[i] >= samp->N){
             fprintf(stderr, "Error: Cannot save an index larger than the dimension of the problem.\nExiting\n");
             abort();
@@ -203,7 +203,7 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     // counter for number of samples accepted
     samp->accepted_host = (cl_ulong *) malloc(samp->K_over_two * sizeof(cl_ulong));
     if(!(samp->accepted_host)){ perror("Allocation failure accepted host"); abort(); }
-    for(int i=0; i< (samp->K_over_two); i++) samp->accepted_host[i] = 0;
+    for(cl_long i=0; i< (samp->K_over_two); i++) samp->accepted_host[i] = 0;
 
     // Adjacent memory on x_red moves with in the walker
     // To access the ith component of walker j, take x_red[i + j*N];
@@ -215,7 +215,7 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     // log likelihood
     samp->log_pdf_red_host = (cl_float *) malloc(samp->K_over_two * sizeof(cl_float));
     if(!(samp->log_pdf_red_host)){ perror("Allocation failure X_red_host"); abort(); }
-    for(int i=0; i<(samp->K_over_two); i++) samp->log_pdf_red_host[i] = (-1.0f) / 0.0f;
+    for(cl_long i=0; i<(samp->K_over_two); i++) samp->log_pdf_red_host[i] = (-1.0f) / 0.0f;
 
     // black walkers
     samp->X_black_host = (cl_float *) malloc(samp->N * samp->K_over_two * sizeof(cl_float));
@@ -224,10 +224,13 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     // log likelihood
     samp->log_pdf_black_host = (cl_float *) malloc(samp->K_over_two * sizeof(cl_float));
     if(!(samp->log_pdf_black_host)){ perror("Allocation failure X_red_host"); abort(); }
-    for(int i=0; i< (samp->K_over_two); i++) samp->log_pdf_black_host[i] = (-1.0f) / 0.0f;
+    for(cl_long i=0; i< (samp->K_over_two); i++) samp->log_pdf_black_host[i] = (-1.0f) / 0.0f;
 
     // samples on host
-    cl_int samples_length = samp->num_to_save * samp->M * samp->K;                // length of the samples array
+    // cl_int samples_length = samp->num_to_save * samp->M * samp->K;                // length of the samples array
+    unsigned int samples_length = samp->num_to_save * samp->M * samp->K;                // length of the samples array
+    printf("samp->num_to_save = %d, samp->M = %lld, samp->K = %lld\n", samp->num_to_save, samp->M, samp->K);
+    printf("samples_length = %u, requesting approx %e Gb memory\n", samples_length, samples_length * sizeof(cl_float) * 1.0e-9); 
     samp->samples_host = (cl_float *) malloc(samples_length * sizeof(cl_float));         // samples to return
     if(!(samp->samples_host)){ perror("Allocation failure samples_host"); abort(); }
 
@@ -237,7 +240,7 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     srand48(0);
 
     // initialize the walkers to small random values
-    for(int j=0; j < samp->N * samp->K_over_two; j++){
+    for(cl_long j=0; j < samp->N * samp->K_over_two; j++){
         if(NONNEGATIVE_BOX){
             samp->X_black_host[j] = (cl_float) drand48();
             samp->X_red_host[j]   = (cl_float) drand48();
@@ -274,7 +277,7 @@ sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
     // stretch move kernel
     char *knl_text = read_file("stretch_move.cl");
     char options[300];
-    sprintf(options, "-D NN=%d -D K_OVER_TWO=%d -D WORK_GROUP_SIZE=%d -D DATA_LEN=%d -D PDF_NUMBER=%d -D A_COEFF_0=%.10ff -D A_COEFF_1=%.10ff -D A_COEFF_2=%.10ff  -I . ",
+    sprintf(options, "-D NN=%lld -D K_OVER_TWO=%lld -D WORK_GROUP_SIZE=%d -D DATA_LEN=%d -D PDF_NUMBER=%lld -D A_COEFF_0=%.10ff -D A_COEFF_1=%.10ff -D A_COEFF_2=%.10ff  -I . ",
             samp->N, samp->K_over_two, (int) work_group_size, samp->data_length, pdf_number, a_coeffs[0], a_coeffs[1], a_coeffs[2]);
 
     if(OUTPUT_LEVEL > 0) printf("Options string for stretch move kernel:%s\n", options);
@@ -467,7 +470,7 @@ void update_walker_positions_device(sampler *samp){
 }
 
 
-void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int annealing_loops, cl_int steps_per_loop){
+void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_long  annealing_loops, cl_long  steps_per_loop){
     /*
      Run the simulated annealing to allow the walkers to explore the space
          and (hopefully) increase convergence speed.
@@ -478,14 +481,14 @@ void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int a
           sampler *samp                  Pointer to sampler structure which has been initialized.
           cl_float *cooling_schedule     Values of beta for the simulated annealing
                                          Values should be increasing and the final value should be one
-          cl_int annealing_loops         Number of loops
-          cl_int steps_per_loop          Iterations per loop
+          cl_long  annealing_loops         Number of loops
+          cl_long  steps_per_loop          Iterations per loop
 
      Output:
                                          Pre-allocated sampler arrays now have had simulated annealing performed.
      */
 
-    for(int annealing_step=0; annealing_step<annealing_loops; annealing_step++){
+    for(cl_long annealing_step=0; annealing_step<annealing_loops; annealing_step++){
 
         // set the beta value for this iteration
         (samp->data_st)->beta = cooling_schedule[annealing_step];
@@ -498,7 +501,7 @@ void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int a
             0, NULL, NULL));
         CALL_CL_GUARDED(clFinish, (samp->queue));
 
-        for(int it=0; it<steps_per_loop; it++){
+        for(cl_long it=0; it<steps_per_loop; it++){
             SET_9_KERNEL_ARGS(samp->stretch_knl,
                   samp->X_red_device,
                   samp->log_pdf_red_device,
@@ -534,11 +537,11 @@ void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int a
             CALL_CL_GUARDED(clFinish, (samp->queue));
         }
 
-        if(OUTPUT_LEVEL > 0) printf("Annealing iteration %d\n", annealing_step * steps_per_loop);
+        if(OUTPUT_LEVEL > 0) printf("Annealing iteration %lld\n", annealing_step * steps_per_loop);
     }
 
     // reset the acceptance counter after the annealing
-    for(int i=0; i< (samp->K_over_two); i++) samp->accepted_host[i] = 0;
+    for(cl_long i=0; i< (samp->K_over_two); i++) samp->accepted_host[i] = 0;
     CALL_CL_GUARDED(clEnqueueWriteBuffer, (
         samp->queue, samp->accepted_device, /*blocking*/ CL_TRUE, /*offset*/ 0,
         samp->K_over_two * sizeof(cl_ulong), samp->accepted_host,
@@ -550,7 +553,7 @@ void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int a
 
 
 
-void run_burn_in(sampler *samp, int burn_length){
+void run_burn_in(sampler *samp, cl_long burn_length){
     /*
      Run the sampler to burn in.
      Discard all the samples generated by this routine.
@@ -558,7 +561,7 @@ void run_burn_in(sampler *samp, int burn_length){
 
      Input:
           sampler *samp        Pointer to sampler structure which has been initialized.
-          int burn_length      Number of burn in steps to run.
+          cl_long burn_length      Number of burn in steps to run.
 
      Output:
           Pre-allocated sampler arrays now have had burn-in performed.
@@ -576,7 +579,7 @@ void run_burn_in(sampler *samp, int burn_length){
     CALL_CL_GUARDED(clFinish, (samp->queue));
 
     // do the burn in
-    for(int it=0; it<burn_length; it++){
+    for(cl_long it=0; it<burn_length; it++){
 
         SET_9_KERNEL_ARGS(samp->stretch_knl,
               samp->X_red_device,
@@ -613,7 +616,7 @@ void run_burn_in(sampler *samp, int burn_length){
         CALL_CL_GUARDED(clFinish, (samp->queue));
 
         if( ((it % MAX((burn_length/10),1)) == 0) && (OUTPUT_LEVEL > 0))
-                printf("Burn iteration %d\n", it);
+                printf("Burn iteration %lld\n", it);
     }
 
 
@@ -621,7 +624,7 @@ void run_burn_in(sampler *samp, int burn_length){
     CALL_CL_GUARDED(clFinish, (samp->queue));
 
     // reset the acceptance counter after the burn in
-    for(int i=0; i< (samp->K_over_two); i++)
+    for(cl_long i=0; i< (samp->K_over_two); i++)
         samp->accepted_host[i] = 0;
 
     CALL_CL_GUARDED(clEnqueueWriteBuffer, (
@@ -685,7 +688,7 @@ void run_sampler(sampler *samp){
     char read_samples = 0;
 
     // main sampling loop
-    for(int it=0; it < samp->M + 1; it++){
+    for(cl_long it=0; it < samp->M + 1; it++){
 
         // update X_red
         SET_9_KERNEL_ARGS(samp->stretch_knl,
@@ -751,7 +754,7 @@ void run_sampler(sampler *samp){
         CALL_CL_GUARDED(clFinish, (samp->queue));
 
         if( ((it % (MAX(samp->M/10,1))) == 0) && (OUTPUT_LEVEL > 0) )
-            printf("Sample iteration %d\n", it);
+            printf("Sample iteration %lld\n", it);
 
         read_samples = 1;
     }
@@ -772,7 +775,7 @@ void run_sampler(sampler *samp){
     CALL_CL_GUARDED(clFinish, (samp->queue));
 
     samp->accepted_total = 0;
-    for(int i=0; i<samp->K_over_two; i++)
+    for(cl_long i=0; i<samp->K_over_two; i++)
         samp->accepted_total += samp->accepted_host[i];
 
     // end total timing
@@ -804,8 +807,8 @@ void print_run_summary(sampler *samp){
     // check output
     // --------------------------------------------------------------------------
 
-    printf("Time steps = %d\n", samp->M);
-    printf("Total samples = %d\n", samp->M * samp->K);
+    printf("Time steps = %lld\n", samp->M);
+    printf("Total samples = %lld\n", samp->M * samp->K);
     printf("ldim = %d\tgdim = %d\n", (int) samp->ldim[0], (int) samp->gdim[0]);
     printf("Total accepted = %lu\n", samp->accepted_total);
     printf("Acceptance rate = %f\n", (cl_float) samp->accepted_total / ((cl_float) (samp->M * samp->K)) ) ;
@@ -822,10 +825,11 @@ void print_run_summary(sampler *samp){
     float *X = (float *) malloc(samp->total_samples * sizeof(float));
     if(!X){ perror("Allocation failure basic stats"); abort(); }
 
-    for(int i=0; i<samp->num_to_save; i++){
+    for(cl_long i=0; i<samp->num_to_save; i++){
 
-        for(int j=0; j<samp->total_samples; j++)
+        for(cl_long j=0; j<samp->total_samples; j++){
             X[j] = samp->samples_host[i + j * (samp->num_to_save)];
+        }
 
         compute_mean_stddev(X, &mean, &sigma, samp->total_samples);
 
@@ -861,16 +865,16 @@ void run_acor(sampler *samp){
 
 
     // use every ensemble mean
-    int L = samp->M;
-    int acor_pass;
+    cl_long L = samp->M;
+    cl_long acor_pass;
 
     // For each component
-    for(int i=0; i<samp->num_to_save; i++){
+    for(cl_long i=0; i<samp->num_to_save; i++){
 
         // calculate the ensemble mean for this time step
-        for(int t=0; t<samp->M; t++){
+        for(cl_long t=0; t<samp->M; t++){
             ensemble_means[t] = 0.0;
-            for(int kk=0; kk<samp->K; kk++)
+            for(cl_long kk=0; kk<samp->K; kk++)
                 ensemble_means[t] += (double) samp->samples_host[i + (kk * samp->num_to_save) + t*(samp->num_to_save * samp->K)];
             ensemble_means[t] /= ((double) samp->K);
         }
@@ -920,7 +924,7 @@ void output_histograms(sampler *samp, char matlab_hist, char gnuplot_hist){
           Write data files for histograms.
      */
 
-    int n_bins = 100;
+    cl_long n_bins = 100;
     double tau;
 
     float *centers = (float *) malloc(n_bins * sizeof(float));
@@ -930,9 +934,9 @@ void output_histograms(sampler *samp, char matlab_hist, char gnuplot_hist){
     float *X = (float *) malloc(samp->total_samples * sizeof(float));
     if(!X){ perror("Allocation failure Histogram"); abort(); }
 
-    for(int i=0; i<samp->num_to_save; i++){
+    for(cl_long i=0; i<samp->num_to_save; i++){
 
-        for(int j=0; j < samp->total_samples; j++)
+        for(cl_long j=0; j < samp->total_samples; j++)
             X[j] = samp->samples_host[i + j*(samp->num_to_save)];
 
         tau = samp->acor_times[i];

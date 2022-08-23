@@ -45,14 +45,14 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 typedef struct{
 
         // user set parameters
-        cl_int M;                           // Number of steps to run
-        cl_int N;                           // Dimension of the problem and the walkers
-        cl_int K_over_two;                  // Number of walkers in each group
+        cl_long M;                           // Number of steps to run
+        cl_long N;                           // Dimension of the problem and the walkers
+        cl_long K_over_two;                  // Number of walkers in each group
         double a;                           // Coefficient for range of 'z' random variable
 
         // derived parameters
-        cl_int K;                           // Total walkers
-        cl_int total_samples;               // Total samples produced
+        cl_long K;                           // Total walkers
+        cl_long total_samples;               // Total samples produced
 
 
         // Note: components are in adjacent memory in the walker.
@@ -117,16 +117,16 @@ typedef struct{
 
 
 // sampling routines
-sampler* initialize_sampler(cl_int chain_length, cl_int dimension,
-                            cl_int walkers_per_group, size_t work_group_size,
-                            double a, cl_int pdf_number,
-                            cl_int data_length, cl_float *data,
-                            cl_int num_to_save, cl_int *indices_to_save,
+sampler* initialize_sampler(cl_long chain_length, cl_long dimension,
+                            cl_long walkers_per_group, size_t work_group_size,
+                            double a, cl_long pdf_number,
+                            cl_long data_length, cl_float *data,
+                            cl_long num_to_save, cl_int *indices_to_save,
                             const char *plat_name, const char *dev_name);
 
 void update_walker_positions_device(sampler *samp);
-void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_int annealing_loops, cl_int steps_per_loop);
-void run_burn_in(sampler *samp, int burn_length);
+void run_simulated_annealing(sampler *samp, cl_float *cooling_schedule, cl_long annealing_loops, cl_long steps_per_loop);
+void run_burn_in(sampler *samp, cl_long burn_length);
 void run_sampler(sampler *samp);
 void print_run_summary(sampler *samp);
 void run_acor(sampler *samp);
