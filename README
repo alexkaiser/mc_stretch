@@ -1,7 +1,7 @@
 
-Fast, GPU parallel Markov chain Monte Carlo. 
+MC Stretch: GPU parallel, affine invariant Markov chain Monte Carlo. 
 
-Much more detail in readme_stretch_move_ocl.pdf. 
+Much more detail in readme_mc_stretch.pdf.
 
 Please email adkaiser at the domain gmail.com for help. 
 
