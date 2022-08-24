@@ -103,15 +103,15 @@ void write_parameter_file_matlab(cl_long M, cl_long N, cl_long K, char *sampler_
      */
 
     FILE *f = fopen("load_parameters.m", "w");
-    fprintf(f, "M = %d;\n", M);
-    fprintf(f, "N = %d;\n", N);
-    fprintf(f, "K = %d;\n", K);
+    fprintf(f, "M = %lld;\n", M);
+    fprintf(f, "N = %lld;\n", N);
+    fprintf(f, "K = %lld;\n", K);
     fprintf(f, "name = '%s';\n", sampler_name);
-    fprintf(f, "pdf_num = %d;\n", pdf_num);
+    fprintf(f, "pdf_num = %lld;\n", pdf_num);
     fprintf(f, "indicesToSave = [");
     for(cl_long j=0; j<num_to_save-1; j++)
-        fprintf(f, "%d; ", indices_to_save[j]+1);                // add one to index for matlab
-    fprintf(f, "%d];\n\n", indices_to_save[num_to_save-1]+1);
+        fprintf(f, "%lld; ", indices_to_save[j]+1);                // add one to index for matlab
+    fprintf(f, "%lld];\n\n", indices_to_save[num_to_save-1]+1);
     fclose(f);
 }
 
@@ -171,7 +171,7 @@ void histogram_data(cl_long n_bins, float *samples, cl_long n_samples, double ta
 
         if((idx < 0) || (idx>=n_bins)){
             lost++;                            // we're off to the side, this is bad
-            printf("sample lost: %f, idx = %d\n", samples[k], idx); 
+            printf("sample lost: %f, idx = %lld\n", samples[k], idx); 
         }
         else{
             bin_counts[idx]++;                 // increment the bin count 
@@ -180,7 +180,7 @@ void histogram_data(cl_long n_bins, float *samples, cl_long n_samples, double ta
 
     // turn the bins into estimates 
     // estimate sigma for the bin count as well
-    double effective_samples = ((double) n_samples) / tau;
+    // double effective_samples = ((double) n_samples) / tau;
 
     float pk;
     for(cl_long k=0; k<n_bins; k++){
@@ -189,7 +189,7 @@ void histogram_data(cl_long n_bins, float *samples, cl_long n_samples, double ta
     }
         
     if(lost > 1)
-        fprintf(stderr, "Warning. Histogram lost %d samples. Consider expanding histogram bounds.\n", lost); 
+        fprintf(stderr, "Warning. Histogram lost %lld samples. Consider expanding histogram bounds.\n", lost); 
         
     free(bin_counts);     
 }
@@ -211,7 +211,7 @@ void histogram_to_matlab(cl_long n_bins, float *centers, float *f_hat, cl_long v
      */
 
     char title[100]; 
-    sprintf(title, "histogram_data_%d.m", var_number);     
+    sprintf(title, "histogram_data_%lld.m", var_number);     
 
     FILE *f = fopen(title, "w");
 
@@ -247,7 +247,7 @@ void histogram_to_gnuplot(cl_long n_bins, float *centers, float *f_hat, cl_long 
      */
 
     char title[100]; 
-    sprintf(title, "histogram_data_gnuplot_%d.dat", var_number);
+    sprintf(title, "histogram_data_gnuplot_%lld.dat", var_number);
 
     FILE *f = fopen(title, "w");
 
